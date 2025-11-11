@@ -67,7 +67,7 @@ class Run:
             if self.zag.face_dir == 1:
                 self.zag.image.clip_composite_draw(int(self.zag.frame) * 32, 0, 32, 64,0,'', self.zag.x, self.zag.y,32,64)
             else:
-                self.zag.image.clip_composite_draw(int(self.zag.frame) * 32, 64, 32, 64, 0, 'h', self.zag.x, self.zag.y,32,64)
+                self.zag.image.clip_composite_draw(int(self.zag.frame) * 32, 0, 32, 64, 0, 'h', self.zag.x, self.zag.y,32,64)
         elif self.zag.xdir==1:
             self.zag.image.clip_composite_draw(int(self.zag.frame) * 32, 0, 32, 64,0,'', self.zag.x, self.zag.y,32,64)
         else:
@@ -99,6 +99,7 @@ class Zag:
 
     def handle_event(self, event):
         if event.key in (SDLK_RIGHT, SDLK_LEFT, SDLK_UP, SDLK_DOWN):
+            cur_xdir, cur_ydir = self.xdir, self.ydir
             if event.type == SDL_KEYDOWN:
                 if event.key == SDLK_RIGHT:
                     self.xdir += 1
@@ -118,9 +119,14 @@ class Zag:
                     self.ydir -= 1
                 elif event.key == SDLK_DOWN:
                     self.ydir += 1
-            if self.xdir == 0 and self.ydir == 0:
-                self.state_machine.handle_state_event(('STOP', self.face_dir))
-            else:
-                self.state_machine.handle_state_event(('RUN', None))
+            if cur_xdir != self.xdir or cur_ydir != self.ydir:
+                # 가로 방향이 변경되어 0이 아닌 경우 즉시 face_dir 업데이트
+                if self.xdir != 0:
+                    self.face_dir = self.xdir
+
+                if self.xdir == 0 and self.ydir == 0:
+                    self.state_machine.handle_state_event(('STOP', self.face_dir))
+                else:
+                    self.state_machine.handle_state_event(('RUN', None))
         else:
             self.state_machine.handle_state_event(('INPUT', event))
