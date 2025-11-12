@@ -2,6 +2,7 @@ import os
 from pico2d import *
 import game_framework
 import game_world
+import random
 # 상수
 FRAME_W = 21
 FRAME_H = 21
@@ -30,16 +31,16 @@ class Slime:
         self.image = load_image(image_path)
 
         self.hp = 10
-        self.x = 500.0
-        self.y_base = 300.0
+        self.x = random.randint(100, 1100)
+        self.y_base = random.randint(100, 600)
         self.y = self.y_base
 
-        # 기본 프레임은 착지 프레임으로 고정
+        # 슬라임별로 무작위의 점프 타이머 초기값 설정
+        self.jump_timer = random.uniform(0.0, HOP_INTERVAL)
         self.frame = JUMP_LAND_FRAME
         self.anim_timer = 0.0
 
         self.dir = -1
-        self.jump_timer = 0.0
 
         # 준비(anticipation) 상태 플래그
         self.preparing = False
