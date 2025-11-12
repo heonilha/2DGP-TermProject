@@ -1,10 +1,11 @@
 from pico2d import *
 from sdl2 import SDL_KEYDOWN, SDLK_SPACE, SDLK_RIGHT, SDL_KEYUP, SDLK_LEFT, SDLK_UP, SDLK_DOWN
 
+import os
 import game_framework
 import game_world
 from state_machine import StateMachine
-
+import title_mode
 def space_down(e):  # e is space down ?
     return e[0] == 'INPUT' and e[1].type == SDL_KEYDOWN and e[1].key == SDLK_SPACE
 
@@ -14,6 +15,9 @@ def event_stop(e):
 
 def event_run(e):
     return e[0] == 'RUN'
+
+def event_die(e):
+    return e[0] == 'DIE'
 
 PIXEL_PER_METER = (10.0 / 0.5)  # 10 pixel 50 cm
 RUN_SPEED_KMPH = 20.0  # Km / Hour
@@ -25,6 +29,33 @@ TIME_PER_ACTION = 0.5
 IDLE_PER_TIME = 1.0 / TIME_PER_ACTION
 FRAMES_PER_ACTION = 2
 RUN_PER_TIME = 2.5 / TIME_PER_ACTION
+
+# Die클래스 추가
+# 죽으면 화면이 어두워지면서 타이틀 화면으로 넘어감
+class Die:
+    def __init__(self, zag):
+        self.zag = zag
+        self.death_timer = 2.0  # 2초 후 타이틀 화면으로 이동
+        self.defeat_image = load_image(os.path.join(r'C:\Users\heonilha\Documents\GitHub\2DGP-TermProject\resource\Image\GUI\defeat.png'))
+    def enter(self,e):
+        print("Zag is Dead")
+        self.zag.invincibleTimer = 0.0
+        pass
+
+    def exit(self,e):
+        pass
+
+    def do(self):
+        if self.death_timer <= 0:
+            game_world.clear()
+            game_framework.change_mode(title_mode)
+        self.death_timer -= game_framework.frame_time
+    def draw(self):
+
+        if self.death_timer > 0.5:  # 0.5초 정도 남을 때까지 DEFEAT 표시
+            self.defeat_image.draw(get_canvas_width() // 2, get_canvas_height() // 2)
+
+
 
 class Idle:
     def __init__(self, zag):
@@ -76,26 +107,51 @@ class Run:
 class Zag:
     def __init__(self):
         self.x, self.y = 400, 300
-        self.image = load_image('ZAG_ani.png')
+        self.image = load_image(os.path.join(r'C:\Users\heonilha\Documents\GitHub\2DGP-TermProject\resource\Image\Character\ZAG_ani.png'))
         self.frame = 0
         self.xdir = 0
         self.ydir = 0
         self.face_dir = 1
+        self.hp = 10
+        self.invincibleTimer = 0.0
 
         self.IDLE = Idle(self)
         self.RUN = Run(self)
+        self.DIE = Die(self)
         self.state_machine = StateMachine(
             self.IDLE,
             state_transitions={
-                self.IDLE: {space_down: self.IDLE, event_run: self.RUN},
-                self.RUN: {space_down: self.RUN, event_stop: self.IDLE}
+                self.IDLE: {space_down: self.IDLE, event_run: self.RUN, event_die: self.DIE},
+                self.RUN: {space_down: self.RUN, event_stop: self.IDLE, event_die: self.DIE},
+                self.DIE: {}
             }
         )
     def update(self):
+        if self.hp <= 0 and self.state_machine.cur_state != self.DIE:
+            # 'DIE' 이벤트를 발생시켜 상태 머신이 DIE 상태로 변경하도록 함
+            self.state_machine.handle_state_event(('DIE', None))
+            # 사망 상태로 진입했다면, 즉시 Die.do()가 실행되도록 하고
+            # 이번 프레임의 나머지 update(무적 타이머 감소 등)는 생략
+            self.state_machine.update()
+            return
+
+        if self.invincibleTimer>0:
+            self.invincibleTimer-= game_framework.frame_time
+            if self.invincibleTimer<0:
+                self.invincibleTimer=0.0
+                print("무적시간 종료")
         self.state_machine.update()
 
     def draw(self):
-        self.state_machine.draw()
+        if getattr(self.state_machine, 'cur_state', None) == self.DIE:
+            self.DIE.draw()
+            return
+
+        if self.invincibleTimer>0:
+            if int(self.invincibleTimer * 10) % 2 == 0:
+                self.state_machine.draw()
+        else:
+            self.state_machine.draw()
 
     def handle_event(self, event):
         if event.key in (SDLK_RIGHT, SDLK_LEFT, SDLK_UP, SDLK_DOWN):
@@ -130,3 +186,15 @@ class Zag:
                     self.state_machine.handle_state_event(('RUN', None))
         else:
             self.state_machine.handle_state_event(('INPUT', event))
+
+    def get_bb(self):
+        return self.x - 16, self.y - 32, self.x + 16, self.y + 32
+
+    def handle_collision(self, group, other):
+        if group == 'zag:slime':
+            if self.invincibleTimer <= 0.0:
+                self.hp -= 10
+                print(f'Zag HP: {self.hp}')
+                self.invincibleTimer = 1.0
+            else:
+                pass
