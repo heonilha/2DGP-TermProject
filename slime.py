@@ -1,7 +1,7 @@
 import os
 from pico2d import *
 import game_framework
-
+import game_world
 # 상수
 FRAME_W = 21
 FRAME_H = 21
@@ -29,6 +29,7 @@ class Slime:
             raise FileNotFoundError(f"Image not found: `{image_path}`")
         self.image = load_image(image_path)
 
+        self.hp = 10
         self.x = 500.0
         self.y_base = 300.0
         self.y = self.y_base
@@ -48,6 +49,8 @@ class Slime:
         self.hop_start_x = self.x
         self.hop_target_x = self.x
 
+        self.dead = False
+
     def _start_hop(self):
         # hop 시작: 준비 상태 종료, 공중 프레임 고정
         self.preparing = False
@@ -60,6 +63,9 @@ class Slime:
         self.anim_timer = 0.0
 
     def update(self):
+        if self.dead:
+            return
+
         dt = game_framework.frame_time
 
         # hop 타이머 업데이트
@@ -110,6 +116,9 @@ class Slime:
                 # 평상시: 애니메이션 없음, 항상 착지 프레임 유지
                 self.frame = JUMP_LAND_FRAME
                 self.anim_timer = 0.0
+        if self.hp <= 0 and not self.dead:
+            self.dead = True
+            game_world.remove_object(self)
 
     def draw(self):
         left = int(self.frame) * FRAME_W
