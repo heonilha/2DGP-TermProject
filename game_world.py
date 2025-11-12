@@ -1,4 +1,6 @@
 world = [[] for _ in range(4)]
+collision_pairs = {}
+
 
 def add_object(o, depth = 0):
     world[depth].append(o)
@@ -26,7 +28,11 @@ def clear():
     for layer in world:
         layer.clear()
 
-
+def all_objects():
+    result = []
+    for layer in world:
+        result.extend(layer)
+    return result
 
 def collide(a, b):
     left_a, bottom_a, right_a, top_a = a.get_bb()
@@ -37,7 +43,6 @@ def collide(a, b):
     if bottom_a > top_b: return False
     return True
 
-collision_pairs = {}
 def add_collision_pair(group, a, b):
     if group not in collision_pairs:
             print(f'Added new group {group}')
