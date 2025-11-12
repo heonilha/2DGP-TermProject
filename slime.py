@@ -119,3 +119,11 @@ class Slime:
         flip = '' if self.dir < 0 else 'h'
         self.image.clip_composite_draw(left, bottom, FRAME_W, FRAME_H, 0, flip,
                                        self.x, self.y, draw_w, draw_h)
+
+    def get_bb(self):
+        half_w = (FRAME_W * SCALE) / 2
+        half_h = (FRAME_H * SCALE) / 2
+        return self.x - half_w, self.y - half_h, self.x + half_w, self.y + half_h
+
+    def handle_collision(self, group, other):
+        pass
