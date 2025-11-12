@@ -5,8 +5,10 @@ import game_framework
 import game_world
 
 from zag import Zag
+from slime import Slime
 
 zag = None
+slime = None
 
 def handle_events():
     event_list = get_events()
@@ -22,7 +24,11 @@ def init():
     global zag
     zag = Zag()
     game_world.add_object(zag, 1)
-
+    game_world.add_collision_pair('zag:slime', zag, None)
+    global slime
+    slime = Slime()
+    game_world.add_object(slime, 1)
+    game_world.add_collision_pair('zag:slime', None, slime)
 
 
 
