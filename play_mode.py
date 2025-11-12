@@ -10,7 +10,7 @@ from slime import Slime
 from background import Background
 
 zag = None
-slime = None
+slimes = []
 
 def handle_events():
     event_list = get_events()
@@ -27,10 +27,12 @@ def init():
     zag = Zag()
     game_world.add_object(zag, 1)
     game_world.add_collision_pair('zag:slime', zag, None)
-    global slime
-    slime = Slime()
-    game_world.add_object(slime, 1)
-    game_world.add_collision_pair('zag:slime', None, slime)
+    global slimes
+    for i in range(5):
+        slime = Slime()
+        slimes.append(slime)
+        game_world.add_object(slime, 1)
+        game_world.add_collision_pair('zag:slime', zag, slime)
     global background
     background=Background()
     game_world.add_object(background, 0)
