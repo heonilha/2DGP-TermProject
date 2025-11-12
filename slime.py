@@ -128,6 +128,18 @@ class Slime:
         flip = '' if self.dir < 0 else 'h'
         self.image.clip_composite_draw(left, bottom, FRAME_W, FRAME_H, 0, flip,
                                        self.x, self.y, draw_w, draw_h)
+        if self.hp > 0:
+            hp_bar_width = 50
+            hp_bar_height = 5
+            hp_bar_x = self.x - hp_bar_width // 2
+            hp_bar_y = self.y + 40
+
+            # 배경 (회색) - 색상을 튜플이 아닌 정수 인자로 전달
+            draw_rectangle(hp_bar_x, hp_bar_y, hp_bar_x + hp_bar_width, hp_bar_y + hp_bar_height, 100, 100, 100)
+
+            # 현재 HP (초록색)
+            current_hp_width = int(hp_bar_width * (self.hp / 10))
+            draw_rectangle(hp_bar_x, hp_bar_y, hp_bar_x + current_hp_width, hp_bar_y + hp_bar_height, 0, 255, 0)
 
     def get_bb(self):
         half_w = (FRAME_W * SCALE) / 2

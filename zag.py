@@ -5,7 +5,7 @@ import os
 import game_framework
 import game_world
 from state_machine import StateMachine
-import title_mode
+
 def space_down(e):  # e is space down ?
     return e[0] == 'INPUT' and e[1].type == SDL_KEYDOWN and e[1].key == SDLK_SPACE
 
@@ -112,6 +112,7 @@ class Die:
         pass
 
     def do(self):
+        import title_mode
         if self.death_timer <= 0:
             game_world.clear()
             game_framework.change_mode(title_mode)
@@ -217,16 +218,30 @@ class Zag:
                 print("무적시간 종료")
         self.state_machine.update()
 
+    # python
     def draw(self):
         if getattr(self.state_machine, 'cur_state', None) == self.DIE:
             self.DIE.draw()
             return
 
-        if self.invincibleTimer>0:
+        if self.invincibleTimer > 0:
             if int(self.invincibleTimer * 10) % 2 == 0:
                 self.state_machine.draw()
         else:
             self.state_machine.draw()
+
+        if self.hp > 0:
+            hp_bar_width = 50
+            hp_bar_height = 5
+            hp_bar_x = self.x - hp_bar_width // 2
+            hp_bar_y = self.y + 40
+
+            # 배경 (회색) - 색상을 튜플이 아닌 정수 인자로 전달
+            draw_rectangle(hp_bar_x, hp_bar_y, hp_bar_x + hp_bar_width, hp_bar_y + hp_bar_height, 100, 100, 100)
+
+            # 현재 HP (초록색)
+            current_hp_width = int(hp_bar_width * (self.hp / 100))
+            draw_rectangle(hp_bar_x, hp_bar_y, hp_bar_x + current_hp_width, hp_bar_y + hp_bar_height, 0, 255, 0)
 
     def handle_event(self, event):
         # 1. ◀◀◀ [핵심 수정]
