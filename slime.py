@@ -23,10 +23,10 @@ JUMP_AIR_FRAME = 1   # 공중에 있을 때 보여줄 프레임
 JUMP_LAND_FRAME = 0  # 착지 후 보여줄 프레임
 
 # 공격 관련 상수
-ATTACK_RANGE = 150.0             # 공격 감지 범위
+ATTACK_RANGE = 100.0             # 공격 감지 범위
 ATTACK_COOLTIME = 3.0            # 공격 쿨타임
 ATTACK_ANIM_SPEED = 0.2          # 공격 준비 애니메이션 속도 (프레임당 0.2초)
-ATTACK_HOLD_DURATION = 1.0       # 공격 전 1초 대기 시간
+ATTACK_HOLD_DURATION = 0.5       # 공격 전 1초 대기 시간
 ATTACK_DASH_DURATION = 0.2       # 실제 돌진(dash)에 걸리는 시간
 
 class Slime:
@@ -212,8 +212,11 @@ class Slime:
                     self.attack_start_pos = (self.x, self.y)
                     self.attack_target_pos = (zag.x, zag.y)
 
-                    # (옵션) 공격 시작 프레임 설정
-                    # self.frame = ATTACK_START_FRAME
+                    # 플레이어의 x좌표와 비교하여 방향(dir)을 설정합니다.
+                    if zag.x < self.x:
+                        self.dir = -1  # 플레이어가 왼쪽에 있음 (왼쪽 보기)
+                    elif zag.x > self.x:
+                        self.dir = 1  # 플레이어가 오른쪽에 있음 (오른쪽 보기)
 
                 else:
                     # 사거리 밖이거나 쿨타임 중 (아무것도 안 함)
