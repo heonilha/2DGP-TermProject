@@ -43,13 +43,15 @@ class Attack:
         self.zag = zag
         self.attack_image = attack_image
         self.attack_timer = 0.0  # 공격 지속시간 타이머
-        self.attack_duration = 0.3  # 총 공격 시간 (0.5초)
+        self.attack_duration = 0.2  # 총 공격 시간 (0.2초)
         self.hit_monsters = []  # ◀◀◀ [중요] 이번 공격에 맞은 몬스터 목록
 
     def enter(self,e):
         print("Zag Attack")
         self.attack_timer = self.attack_duration
         self.hit_monsters.clear()
+
+        self.zag.attack_cooldown_timer = self.zag.attack_cooldown
 
     def exit(self,e):
         pass
@@ -212,6 +214,9 @@ class Zag:
         self.face_dir = 1
         self.hp = 50
         self.invincibleTimer = 0.0
+        self.attack_cooldown = 1.0  # 공격 쿨타임 (예: 1.0초)
+        self.attack_cooldown_timer = 0.0  # 쿨타임 계산용 타이머 (0이 되어야 공격 가능)
+
         self.keys_down = set()
         self.key_map = {
             SDLK_RIGHT:(1,0),
@@ -240,6 +245,9 @@ class Zag:
             # 이번 프레임의 나머지 update(무적 타이머 감소 등)는 생략
             self.state_machine.update()
             return
+
+        if self.attack_cooldown_timer > 0:
+            self.attack_cooldown_timer -= game_framework.frame_time
 
         if self.invincibleTimer>0:
             self.invincibleTimer-= game_framework.frame_time
@@ -289,7 +297,16 @@ class Zag:
 
         # 4. 이동 키가 아니라면 (공격, 스페이스바 등)
         else:
-            self.state_machine.handle_state_event(('INPUT', event))
+            if event_attack(('INPUT', event)):
+                # 쿨타임이 0 이하일 때만 (공격 가능할 때만) 이벤트를 처리
+                if self.attack_cooldown_timer <= 0:
+                    self.state_machine.handle_state_event(('INPUT', event))
+                else:
+                    # 쿨타임 중이면 Z키를 눌러도 아무것도 안 함 (무시)
+                    pass
+            else:
+                # 'Z' 키가 아닌 다른 키(스페이스바 등)는 그냥 처리
+                self.state_machine.handle_state_event(('INPUT', event))
 
         # 5. set을 기반으로 xdir/ydir을 매번 새로 계산
         cur_xdir, cur_ydir = self.xdir, self.ydir
