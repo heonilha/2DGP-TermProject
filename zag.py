@@ -51,12 +51,12 @@ class Attack:
         self.attack_timer = self.attack_duration
         self.hit_monsters.clear()
 
-        self.zag.xdir = 0
-        self.zag.ydir = 0
     def exit(self,e):
         pass
 
     def do(self):
+        self.zag.x += self.zag.xdir * RUN_SPEED_PPS * game_framework.frame_time
+        self.zag.y += self.zag.ydir * RUN_SPEED_PPS * game_framework.frame_time
         self.attack_timer -= game_framework.frame_time
 
         # ◀◀◀ 공격 판정 시간 (예: 0.3초 중 0.1초~0.2초 사이)
@@ -64,10 +64,15 @@ class Attack:
         if 0.1 < self.attack_timer < 0.2:
             self.check_attack_collision()
 
-        # ◀◀◀ 공격 시간이 끝나면 IDLE로 복귀
+        # ◀◀◀ 공격 시간이 끝나면 IDLE또는 RUN으로 복귀
         if self.attack_timer <= 0:
-            self.zag.state_machine.handle_state_event(('TIME_OUT', None))
-
+            # ◀ zag의 xdir, ydir을 확인 (handle_event가 갱신해 줌)
+            if self.zag.xdir != 0 or self.zag.ydir != 0:
+                # ◀ 움직임이 있다면 RUN 상태로 복귀
+                self.zag.state_machine.handle_state_event(('RUN', None))
+            else:
+                # ◀ 멈춰있다면 IDLE 상태로 복귀 (기존 TIME_OUT)
+                self.zag.state_machine.handle_state_event(('TIME_OUT', None))
     def draw(self):
         # 원본/목표 크기 (원본 이미지 크기에 맞춰 필요하면 조정)
         src_w, src_h = 114, 217
@@ -223,7 +228,7 @@ class Zag:
             state_transitions={
                 self.IDLE: {space_down: self.IDLE, event_run: self.RUN, event_die: self.DIE,event_attack: self.ATTACK},
                 self.RUN: {space_down: self.RUN, event_stop: self.IDLE, event_die: self.DIE, event_attack: self.ATTACK},
-                self.ATTACK: {event_timeout: self.IDLE, event_die: self.DIE},
+                self.ATTACK: {event_timeout: self.IDLE, event_run: self.RUN, event_die: self.DIE},
                 self.DIE: {}
             }
         )
@@ -269,21 +274,9 @@ class Zag:
             draw_rectangle(hp_bar_x, hp_bar_y, hp_bar_x + current_hp_width, hp_bar_y + hp_bar_height, 0, 255, 0)
 
     def handle_event(self, event):
-        # 1. ◀◀◀ [핵심 수정]
-        #    죽었거나 공격 중일 때
-        if self.state_machine.cur_state in (self.DIE, self.ATTACK):
-
-            # ◀ '이동 키'의 'KEYUP' 이벤트는 특별히 처리해서 set에서 제거
-            if event.type == SDL_KEYUP and event.key in self.key_map:
-                self.keys_down.discard(event.key)
-
-            # ◀ (필요시) 공격 중에 죽는 이벤트는 받아들일 수 있음
-            # if event_die(('INPUT', event)):
-            #    self.state_machine.handle_state_event(('DIE', None))
-
-            # ◀ 그리고 나머지 모든 이벤트(KEYDOWN, Z, Space 등)는 무시
+        #    죽었을 때
+        if self.state_machine.cur_state == self.DIE:
             return
-
         # 2. (이하 기존 'set' 방식 로직)
         #    살아있고, 공격 중이 아닐 때의 처리
 
