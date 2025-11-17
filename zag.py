@@ -43,7 +43,7 @@ class Attack:
         self.zag = zag
         self.attack_image = attack_image
         self.attack_timer = 0.0  # 공격 지속시간 타이머
-        self.attack_duration = 0.5  # 총 공격 시간 (0.5초)
+        self.attack_duration = 0.3  # 총 공격 시간 (0.5초)
         self.hit_monsters = []  # ◀◀◀ [중요] 이번 공격에 맞은 몬스터 목록
 
     def enter(self,e):
@@ -69,13 +69,38 @@ class Attack:
             self.zag.state_machine.handle_state_event(('TIME_OUT', None))
 
     def draw(self):
-        #109x217 크기의 사진
+        # 원본/목표 크기 (원본 이미지 크기에 맞춰 필요하면 조정)
+        src_w, src_h = 114, 217
+        dest_w, dest_h = 32, 64
+
+        # 슬라이스 수와 계산
+        slices = 6
+        slice_h_src = src_h // slices
+        slice_h_dest = dest_h / slices
+
+        # 공격 진행률 (0.0 ~ 1.0)
+        progress = max(0.0, min(1.0, (self.attack_duration - self.attack_timer) / self.attack_duration))
+        slices_to_draw = int(progress * slices)
+
+        # 방향 플립과 기본 위치
+        flip = 'h' if self.zag.face_dir == 1 else ''
+        base_x = self.zag.x + (16 if self.zag.face_dir == 1 else -16)
+
+        # 위에서부터 아래로 차례로 그리기
+        base_top_y = self.zag.y + dest_h / 2 - slice_h_dest / 2
+        for i in range(slices_to_draw):
+            # src bottom 좌표: 이미지의 아래쪽 기준
+            src_bottom = src_h - (i + 1) * slice_h_src
+            dest_y = base_top_y - i * slice_h_dest
+            self.attack_image.clip_composite_draw(0, src_bottom, src_w, slice_h_src,
+                                                  0, flip, base_x, dest_y, dest_w, slice_h_dest)
+
+        # 플레이어 원래 스프라이트도 함께 그림
         if self.zag.face_dir == 1:
-            self.attack_image.clip_composite_draw(0, 0, 109, 217, 0, 'h', self.zag.x + 32, self.zag.y, 32, 64)
-            self.zag.image.clip_composite_draw(0, 0, 32, 64,0,'', self.zag.x, self.zag.y,32,64)
+            self.zag.image.clip_composite_draw(0, 0, 32, 64, 0, '', self.zag.x, self.zag.y, 32, 64)
         else:
-            self.attack_image.clip_composite_draw(0, 0, 109, 217, 0, '', self.zag.x - 32, self.zag.y, 32, 64)
-            self.zag.image.clip_composite_draw(0, 0, 32, 64, 0, 'h', self.zag.x, self.zag.y,32,64)
+            self.zag.image.clip_composite_draw(0, 0, 32, 64, 0, 'h', self.zag.x, self.zag.y, 32, 64)
+
     def check_attack_collision(self):
         # 공격 이미지 크기는 폭 64, 높이 64로 가정
 
@@ -180,7 +205,7 @@ class Zag:
         self.xdir = 0
         self.ydir = 0
         self.face_dir = 1
-        self.hp = 100
+        self.hp = 50
         self.invincibleTimer = 0.0
         self.keys_down = set()
         self.key_map = {
@@ -240,7 +265,7 @@ class Zag:
             draw_rectangle(hp_bar_x, hp_bar_y, hp_bar_x + hp_bar_width, hp_bar_y + hp_bar_height, 100, 100, 100)
 
             # 현재 HP (초록색)
-            current_hp_width = int(hp_bar_width * (self.hp / 100))
+            current_hp_width = int(hp_bar_width * (self.hp / 50))
             draw_rectangle(hp_bar_x, hp_bar_y, hp_bar_x + current_hp_width, hp_bar_y + hp_bar_height, 0, 255, 0)
 
     def handle_event(self, event):
