@@ -87,6 +87,11 @@ class Slime:
     def update(self, zag):
         if self.dead:
             return
+
+        if self.hp <= 0 and not self.dead:
+            self.dead = True
+            game_world.remove_object(self)
+
         dt = game_framework.frame_time
 
         if self.attack_state == 'prepare':
@@ -221,9 +226,6 @@ class Slime:
                 else:
                     # 사거리 밖이거나 쿨타임 중 (아무것도 안 함)
                     pass
-        if self.hp <= 0 and not self.dead:
-            self.dead = True
-            game_world.remove_object(self)
 
     def draw(self):
         left = int(self.frame) * FRAME_W
