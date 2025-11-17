@@ -2,6 +2,7 @@ import os
 from pico2d import *
 import game_framework
 import game_world
+import math
 import random
 # 상수
 FRAME_W = 21
@@ -21,6 +22,12 @@ PREPARE_TIME = 0.4   # 점프 \('hop'\) 직전부터 애니메이션 시작
 JUMP_AIR_FRAME = 1   # 공중에 있을 때 보여줄 프레임
 JUMP_LAND_FRAME = 0  # 착지 후 보여줄 프레임
 
+# 공격 관련 상수
+ATTACK_RANGE = 150.0             # 공격 감지 범위
+ATTACK_COOLTIME = 3.0            # 공격 쿨타임
+ATTACK_ANIM_SPEED = 0.2          # 공격 준비 애니메이션 속도 (프레임당 0.2초)
+ATTACK_HOLD_DURATION = 1.0       # 공격 전 1초 대기 시간
+ATTACK_DASH_DURATION = 0.2       # 실제 돌진(dash)에 걸리는 시간
 
 class Slime:
     def __init__(self):
@@ -50,25 +57,96 @@ class Slime:
         self.hop_start_x = self.x
         self.hop_target_x = self.x
 
+        # 공격 관련 변수 초기화
+        self.attack_range_squared = ATTACK_RANGE * ATTACK_RANGE
+        self.attack_state = 'none'
+
+        self.attack_cooltime = ATTACK_COOLTIME
+        self.attack_cooltime_timer = self.attack_cooltime
+
+        self.attack_anim_timer = 0.0
+        self.attack_anim_speed = ATTACK_ANIM_SPEED
+
+        self.hold_duration = ATTACK_HOLD_DURATION
+        self.hold_timer = 0.0
+
+        self.attack_duration = ATTACK_DASH_DURATION
+        self.attack_timer = 0.0
+
         self.dead = False
 
     def _start_hop(self):
-        # hop 시작: 준비 상태 종료, 공중 프레임 고정
         self.preparing = False
         self.hopping = True
         self.hop_timer = 0.0
         self.hop_start_x = self.x
         self.hop_target_x = self.x + self.dir * HOP_DISTANCE
         self.frame = JUMP_AIR_FRAME
-        # 애니 타이머는 공중에서는 사용 안하므로 리셋
         self.anim_timer = 0.0
 
-    def update(self):
+    def update(self, zag):
         if self.dead:
             return
-
         dt = game_framework.frame_time
 
+        if self.attack_state == 'prepare':
+            # "움직이지 않음" (즉, 위치 이동 코드가 없음)
+
+            self.attack_anim_timer += dt
+            if self.attack_anim_timer >= self.attack_anim_speed:
+                self.attack_anim_timer -= self.attack_anim_speed
+
+                if self.frame < 4:
+                    self.frame += 1  # 프레임 0 -> 1 -> 2 -> 3
+
+                # "프레임이 4가 되고"
+                if self.frame == 4:
+                    self.attack_state = 'hold'  # 'hold' 상태로 변경
+                    self.hold_timer = 0.0  # 'hold' 타이머 리셋
+
+            # 다른 모든 로직(점프 등)을 건너뛰어야 함
+            return
+
+            # 1-2. 'hold' 상태: 프레임 4에서 1초 대기
+        elif self.attack_state == 'hold':
+            # "움직이지 않음"
+            self.frame = 4  # 프레임 4로 고정
+
+            self.hold_timer += dt
+            # "1초 기다렸다가"
+            if self.hold_timer >= self.hold_duration:
+                self.attack_state = 'dash'  # 'dash' 상태로 변경
+                self.attack_timer = 0.0  # 'dash' 타이머 리셋
+
+            # 다른 모든 로직 건너뛰기
+            return
+
+            # 1-3. 'dash' 상태: 목표 지점으로 돌진 (기존 is_attacking 로직)
+        elif self.attack_state == 'dash':
+            self.attack_timer += dt
+            t = self.attack_timer / self.attack_duration
+
+            if t >= 1.0:
+                # 돌진 완료
+                self.attack_state = 'none'  # 평상시 상태로 복귀
+                self.x, self.y = self.attack_target_pos
+                self.y_base = self.y  # y_base 갱신 (중요!)
+                self.attack_cooltime_timer = 0.0  # 쿨타임 시작
+            else:
+                # 돌진 중 (선형 보간)
+                self.x = (1 - t) * self.attack_start_pos[0] + t * self.attack_target_pos[0]
+                self.y = (1 - t) * self.attack_start_pos[1] + t * self.attack_target_pos[1]
+
+            # 다른 모든 로직 건너뛰기
+            return
+
+            # ------------------------------------
+            # --- 2. 'none' 상태 (평상시: 점프 & 공격 감지) ---
+            # ------------------------------------
+            # (self.attack_state가 'none'일 때만 아래 코드가 실행됨)
+
+            # 쿨타임 갱신 (공격 중이 아닐 때만 시간이 흐름)
+        self.attack_cooltime_timer += dt
         # hop 타이머 업데이트
         self.jump_timer += dt
 
@@ -117,6 +195,29 @@ class Slime:
                 # 평상시: 애니메이션 없음, 항상 착지 프레임 유지
                 self.frame = JUMP_LAND_FRAME
                 self.anim_timer = 0.0
+
+                # 플레이어와의 거리 제곱 계산
+                distance_sq = (zag.x - self.x) ** 2 + (zag.y - self.y) ** 2
+
+                # 사거리 내 + 쿨타임 완료 = 공격 시작!
+                if (distance_sq <= self.attack_range_squared) and (self.attack_cooltime_timer >= self.attack_cooltime):
+
+                    # --- 💥 공격 시작! (상태 변경) ---
+                    self.attack_state = 'prepare'  # 'prepare' 상태로 진입
+                    self.frame = 0  # 공격 애니메이션 0번 프레임부터
+                    self.attack_anim_timer = 0.0  # 공격 애니메이션 타이머 리셋
+
+                    # "현재" 슬라임 위치와 "현재" 플레이어 위치를 저장
+                    # 이 값들은 돌진이 끝날 때까지 바뀌지 않음
+                    self.attack_start_pos = (self.x, self.y)
+                    self.attack_target_pos = (zag.x, zag.y)
+
+                    # (옵션) 공격 시작 프레임 설정
+                    # self.frame = ATTACK_START_FRAME
+
+                else:
+                    # 사거리 밖이거나 쿨타임 중 (아무것도 안 함)
+                    pass
         if self.hp <= 0 and not self.dead:
             self.dead = True
             game_world.remove_object(self)
@@ -141,6 +242,11 @@ class Slime:
             # 현재 HP (초록색)
             current_hp_width = int(hp_bar_width * (self.hp / 10))
             draw_rectangle(hp_bar_x, hp_bar_y, hp_bar_x + current_hp_width, hp_bar_y + hp_bar_height, 0, 255, 0)
+
+    def get_distance_to_zag_sq(self, zag):
+        dx = self.x - zag.x
+        dy = self.y - zag.y
+        return dx * dx + dy * dy
 
     def get_bb(self):
         half_w = (FRAME_W * SCALE) / 2
