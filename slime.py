@@ -88,7 +88,7 @@ class Slime:
         self.frame = JUMP_AIR_FRAME
         self.anim_timer = 0.0
 
-    def update(self, zag):
+    def update(self):
         if self.dead:
             return
 
@@ -97,6 +97,10 @@ class Slime:
             game_world.remove_object(self)
 
         dt = game_framework.frame_time
+
+        zag = game_world.get_player()
+        if zag is None:
+            return
 
         if self.attack_state == 'prepare':
             # "움직이지 않음" (즉, 위치 이동 코드가 없음)
@@ -271,7 +275,7 @@ class Slime:
         self.hp -= damage
         if self.hp <= 0:
             self.hp = 0
-            player = game_world.player[0]
-            # 3. 그 객체의 gold 변수를 직접 수정
-            player.gold += 10
+            player = game_world.get_player()
+            if player:
+                player.gold += 10
 

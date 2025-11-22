@@ -1,5 +1,6 @@
 world = [[] for _ in range(4)]
 collision_pairs = {}
+player = None
 
 
 def add_object(o, depth = 0):
@@ -24,9 +25,11 @@ def render():
 
 def clear():
     global world
+    global player
 
     for layer in world:
         layer.clear()
+    player = None
 
 def all_objects():
     result = []
@@ -59,6 +62,15 @@ def handle_collisions():
                 if collide(a, b):
                     a.handle_collision(group, b)
                     b.handle_collision(group, a)
+
+
+def set_player(p):
+    global player
+    player = p
+
+
+def get_player():
+    return player
 
 def remove_collision_object(o):
     for pairs in collision_pairs.values():
