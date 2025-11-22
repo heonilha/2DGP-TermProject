@@ -4,6 +4,7 @@ import game_framework
 import game_world
 import math
 import random
+
 # 상수
 FRAME_W = 21
 FRAME_H = 21
@@ -29,6 +30,8 @@ ATTACK_ANIM_SPEED = 0.2          # 공격 준비 애니메이션 속도 (프레�
 ATTACK_HOLD_DURATION = 0.5       # 공격 전 1초 대기 시간
 ATTACK_DASH_DURATION = 0.2       # 실제 돌진(dash)에 걸리는 시간
 
+
+
 class Slime:
     def __init__(self):
         base_dir = os.path.dirname(__file__)
@@ -41,6 +44,7 @@ class Slime:
         self.x = random.randint(100, 1100)
         self.y_base = random.randint(100, 600)
         self.y = self.y_base
+        self.type='monster'
 
         # 슬라임별로 무작위의 점프 타이머 초기값 설정
         self.jump_timer = random.uniform(0.0, HOP_INTERVAL)
@@ -246,7 +250,7 @@ class Slime:
 
             # 현재 HP (초록색)
             current_hp_width = int(hp_bar_width * (self.hp / 10))
-            draw_rectangle(hp_bar_x, hp_bar_y, hp_bar_x + current_hp_width, hp_bar_y + hp_bar_height, 0, 255, 0)
+            draw_rectangle(hp_bar_x, hp_bar_y, hp_bar_x + current_hp_width, hp_bar_y + hp_bar_height, 255, 0, 0)
 
     def get_distance_to_zag_sq(self, zag):
         dx = self.x - zag.x
@@ -259,4 +263,15 @@ class Slime:
         return self.x - half_w, self.y - half_h, self.x + half_w, self.y + half_h
 
     def handle_collision(self, group, other):
+        if group == 'ball:monster':
+            self.take_damage(other.damage)
         pass
+
+    def take_damage(self, damage):
+        self.hp -= damage
+        if self.hp <= 0:
+            self.hp = 0
+            player = game_world.player[0]
+            # 3. 그 객체의 gold 변수를 직접 수정
+            player.gold += 10
+
