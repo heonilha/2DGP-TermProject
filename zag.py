@@ -1,11 +1,11 @@
 from pico2d import *
-from sdl2 import SDL_KEYDOWN, SDLK_z, SDLK_SPACE, SDLK_RIGHT, SDL_KEYUP, SDLK_LEFT, SDLK_UP, SDLK_DOWN
+from sdl2 import SDL_KEYDOWN, SDLK_z, SDLK_SPACE, SDLK_RIGHT, SDL_KEYUP, SDLK_LEFT, SDLK_UP, SDLK_DOWN, SDLK_a, SDLK_1, SDLK_2
 
 import os
 import game_framework
 import game_world
 from state_machine import StateMachine
-
+from fire_ball import FireBall
 def space_down(e):  # e is space down ?
     return e[0] == 'INPUT' and e[1].type == SDL_KEYDOWN and e[1].key == SDLK_SPACE
 
@@ -104,9 +104,9 @@ class Attack:
 
         # 플레이어 원래 스프라이트도 함께 그림
         if self.zag.face_dir == 1:
-            self.zag.image.clip_composite_draw(0, 0, 32, 64, 0, '', self.zag.x, self.zag.y, 32, 64)
+            self.zag.image.clip_composite_draw(0, 0, 32, 64, 0, '', self.zag.x, self.zag.y, self.zag.w, self.zag.h)
         else:
-            self.zag.image.clip_composite_draw(0, 0, 32, 64, 0, 'h', self.zag.x, self.zag.y, 32, 64)
+            self.zag.image.clip_composite_draw(0, 0, 32, 64, 0, 'h', self.zag.x, self.zag.y, self.zag.w, self.zag.h)
 
     def check_attack_collision(self):
         # 공격 이미지 크기는 폭 64, 높이 64로 가정
@@ -125,7 +125,7 @@ class Attack:
                 if (attack_bb[0] < monster_bb[2] and attack_bb[2] > monster_bb[0] and
                     attack_bb[1] < monster_bb[3] and attack_bb[3] > monster_bb[1]):
                     # 충돌 판정이 일어났을 때 처리
-                    monster.hp -= 5
+                    monster.take_damage(5)  # 예: 20의 데미지
                     self.hit_monsters.append(monster)
                     print(f'Monster HP: {monster.hp}')
 
@@ -173,9 +173,9 @@ class Idle:
     #self.zag.image.clip_draw(int(self.zag.frame) * 32, 0, 32, 64, self.zag.x, self.zag.y)
     def draw(self):
         if self.zag.face_dir == 1:
-            self.zag.image.clip_composite_draw(int(self.zag.frame) * 32, 0, 32, 64,0,'', self.zag.x, self.zag.y,32,64)
+            self.zag.image.clip_composite_draw(int(self.zag.frame) * 32, 0, 32, 64,0,'', self.zag.x, self.zag.y,self.zag.w,self.zag.h)
         else:
-            self.zag.image.clip_composite_draw(int(self.zag.frame) * 32, 0, 32, 64,0,'h', self.zag.x, self.zag.y,32,64)
+            self.zag.image.clip_composite_draw(int(self.zag.frame) * 32, 0, 32, 64,0,'h', self.zag.x, self.zag.y,self.zag.w,self.zag.h)
 class Run:
     def __init__(self, zag):
         self.zag = zag
@@ -193,15 +193,16 @@ class Run:
         self.zag.y += self.zag.ydir * RUN_SPEED_PPS * game_framework.frame_time
 #composite_draw(self, left, bottom, width, height, angle, flip, x, y,w,h)
     def draw(self):
-        if self.zag.xdir==0:
-            if self.zag.face_dir == 1:
-                self.zag.image.clip_composite_draw(int(self.zag.frame) * 32, 0, 32, 64,0,'', self.zag.x, self.zag.y,32,64)
-            else:
-                self.zag.image.clip_composite_draw(int(self.zag.frame) * 32, 0, 32, 64, 0, 'h', self.zag.x, self.zag.y,32,64)
-        elif self.zag.xdir==1:
-            self.zag.image.clip_composite_draw(int(self.zag.frame) * 32, 0, 32, 64,0,'', self.zag.x, self.zag.y,32,64)
+        if self.zag.xdir == 0:
+            flip = '' if self.zag.face_dir == 1 else 'h'
+            self.zag.image.clip_composite_draw(int(self.zag.frame) * 32, 0, 32, 64, 0, flip, self.zag.x, self.zag.y,
+                                               self.zag.w, self.zag.h)
+        elif self.zag.xdir == 1:
+            self.zag.image.clip_composite_draw(int(self.zag.frame) * 32, 0, 32, 64, 0, '', self.zag.x, self.zag.y,
+                                               self.zag.w, self.zag.h)
         else:
-            self.zag.image.clip_composite_draw(int(self.zag.frame) * 32, 0, 32, 64, 0, 'h', self.zag.x, self.zag.y,32,64)
+            self.zag.image.clip_composite_draw(int(self.zag.frame) * 32, 0, 32, 64, 0, 'h', self.zag.x, self.zag.y,
+                                               self.zag.w, self.zag.h)
 
 class Zag:
     def __init__(self):
@@ -212,10 +213,17 @@ class Zag:
         self.xdir = 0
         self.ydir = 0
         self.face_dir = 1
-        self.hp = 50
+        self.hp = 100
+        self.mp = 100
         self.invincibleTimer = 0.0
         self.attack_cooldown = 1.0  # 공격 쿨타임 (예: 1.0초)
         self.attack_cooldown_timer = 0.0  # 쿨타임 계산용 타이머 (0이 되어야 공격 가능)
+        self.w = 48
+        self.h = 64
+        self.hp_potions = 3
+        self.mp_potions = 3
+        self.gold = 0
+        self.type='player'
 
         self.keys_down = set()
         self.key_map = {
@@ -256,7 +264,6 @@ class Zag:
                 print("무적시간 종료")
         self.state_machine.update()
 
-    # python
     def draw(self):
         if getattr(self.state_machine, 'cur_state', None) == self.DIE:
             self.DIE.draw()
@@ -278,8 +285,21 @@ class Zag:
             draw_rectangle(hp_bar_x, hp_bar_y, hp_bar_x + hp_bar_width, hp_bar_y + hp_bar_height, 100, 100, 100)
 
             # 현재 HP (초록색)
-            current_hp_width = int(hp_bar_width * (self.hp / 50))
-            draw_rectangle(hp_bar_x, hp_bar_y, hp_bar_x + current_hp_width, hp_bar_y + hp_bar_height, 0, 255, 0)
+            current_hp_width = int(hp_bar_width * (self.hp / 100))
+            draw_rectangle(hp_bar_x, hp_bar_y, hp_bar_x + current_hp_width, hp_bar_y + hp_bar_height, 255, 0, 0)
+
+        if self.mp > 0:
+            mp_bar_width = 50
+            mp_bar_height = 5
+            mp_bar_x = self.x - mp_bar_width // 2
+            mp_bar_y = self.y + 50
+
+            # 배경 (회색) - 색상을 튜플이 아닌 정수 인자로 전달
+            draw_rectangle(mp_bar_x, mp_bar_y, mp_bar_x + mp_bar_width, mp_bar_y + mp_bar_height, 100, 100, 100)
+
+            # 현재 MP (파란색)
+            current_mp_width = int(mp_bar_width * (self.mp / 100))
+            draw_rectangle(mp_bar_x, mp_bar_y, mp_bar_x + current_mp_width, mp_bar_y + mp_bar_height, 0, 0, 255)
 
     def handle_event(self, event):
         #    죽었을 때
@@ -328,10 +348,36 @@ class Zag:
                 self.state_machine.handle_state_event(('STOP', self.face_dir))
             else:
                 self.state_machine.handle_state_event(('RUN', None))
-    def get_bb(self):
-        return self.x - 16, self.y - 32, self.x + 16, self.y + 32
 
-    def handle_collision(self, group, other):
+        if event.type == SDL_KEYDOWN and event.key == SDLK_a:
+            self.fire_ball()
+
+        #1을 누르면 hp포션 사용
+        if event.type == SDL_KEYDOWN and event.key == SDLK_1:
+            if self.hp_potions > 0:
+                self.hp = min(100, self.hp + 20)
+                self.hp_potions -= 1
+                print(f'Used HP Potion. Current HP: {self.hp}, Remaining HP Potions: {self.hp_potions}')
+            else:
+                print("No HP potions left!")
+
+        #2를 누르면 mp포션 사용
+        if event.type == SDL_KEYDOWN and event.key == SDLK_2:
+            if self.mp_potions > 0:
+                self.mp = min(100, self.mp + 20)
+                self.mp_potions -= 1
+                print(f'Used MP Potion. Current MP: {self.mp}, Remaining MP Potions: {self.mp_potions}')
+            else:
+                print("No MP potions left!")
+
+    def get_bb(self):
+        half_w = self.w // 2
+        half_h = self.h // 2
+        return self.x - (self.w / 2) + 10, \
+               self.y - (self.h / 2) + 10, \
+               self.x + (self.w / 2) - 10, \
+               self.y + (self.h / 2) - 10
+    def handle_collision(self, other, group):
         if group == 'zag:slime':
             if self.invincibleTimer <= 0.0:
                 self.hp -= 10
@@ -339,3 +385,14 @@ class Zag:
                 self.invincibleTimer = 1.0
             else:
                 pass
+
+    def fire_ball(self):
+        if self.mp >= 10:
+            self.mp -= 10
+        else:
+            print("Not enough MP to cast Fireball!")
+            return
+        if self.xdir == 0 and self.ydir == 0:
+            self.xdir = self.face_dir
+        fireball = FireBall(self.x, self.y, self.xdir, self.ydir)
+        game_world.add_object(fireball, 1)
