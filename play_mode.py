@@ -26,6 +26,7 @@ def init():
     global zag
     zag = Zag()
     game_world.add_object(zag, 1)
+    game_world.set_player(zag)
     game_world.add_collision_pair('zag:slime', zag, None)
     global slimes
     for i in range(5):
