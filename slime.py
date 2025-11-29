@@ -308,11 +308,3 @@ class Slime(GameObject):
             combat = getattr(other, "combat", None)
             if combat:
                 combat.take_damage(10)
-
-    def take_damage(self, damage):
-        prev_hp = self.hp
-        self.combat.take_damage(damage)
-
-        if self.hp <= 0 < prev_hp:
-            player = game_world.player[0]
-            player.gold += 10
