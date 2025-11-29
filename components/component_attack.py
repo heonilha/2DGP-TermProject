@@ -72,7 +72,7 @@ class AttackComponent(Component):
         attack_image = self.attack_images[frame_index]
         source_w, source_h, dest_w, dest_h = self._get_frame_size(attack_image)
 
-        flip = 'h' if self.attack_dir == 1 else ''
+        flip = '' if self.attack_dir == 1 else 'h'
         base_x = tr.x + (self.offset_x if self.attack_dir == 1 else -self.offset_x)
 
         attack_image.clip_composite_draw(
