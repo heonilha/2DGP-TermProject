@@ -1,5 +1,5 @@
-from component_base import Component
-from component_state_machine import StateMachineComponent
+from components.component_base import Component
+from components.component_state_machine import StateMachineComponent
 import game_framework
 
 class CombatComponent(Component):

@@ -1,5 +1,5 @@
-from component_base import Component
-from component_transform import TransformComponent
+from components.component_base import Component
+from components.component_transform import TransformComponent
 class SpriteComponent(Component):
     def __init__(self, image, frame_w, frame_h):
         super().__init__()
