@@ -1,4 +1,4 @@
-from component_base import Component
+from components.component_base import Component
 
 class SkillComponent(Component):
     def __init__(self):

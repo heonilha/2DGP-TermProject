@@ -1,6 +1,6 @@
 import game_framework
-from component_base import Component
-from component_sprite import SpriteComponent
+from components.component_base import Component
+from components.component_sprite import SpriteComponent
 
 class AnimationComponent(Component):
     def __init__(self, frame_count, fps):

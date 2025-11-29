@@ -426,7 +426,10 @@ class Zag(GameObject):
         else:
             print("Not enough MP to cast Fireball!")
             return
-        if self.xdir == 0 and self.ydir == 0:
-            self.xdir = self.face_dir
-        fireball = FireBall(self.x, self.y, self.xdir, self.ydir)
+        dir_x, dir_y = self.xdir, self.ydir
+        if dir_x == 0 and dir_y == 0:
+            dir_x = self.face_dir
+
+        projectile_dir = (dir_x, dir_y)
+        fireball = FireBall(self.x, self.y, projectile_dir)
         game_world.add_object(fireball, 1)
