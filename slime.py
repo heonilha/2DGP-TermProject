@@ -1,9 +1,17 @@
 import os
+import random
+import math
+
 from pico2d import *
+
 import game_framework
 import game_world
-import math
-import random
+
+from game_object import GameObject
+from components.component_transform import TransformComponent
+from components.component_sprite import SpriteComponent
+from components.component_collision import CollisionComponent
+from components.component_combat import CombatComponent
 
 # 상수
 FRAME_W = 21
@@ -32,19 +40,25 @@ ATTACK_DASH_DURATION = 0.2       # 실제 돌진(dash)에 걸리는 시간
 
 
 
-class Slime:
+class Slime(GameObject):
     def __init__(self):
+        super().__init__()
+
         base_dir = os.path.dirname(__file__)
         image_path = os.path.join(base_dir, 'resource', 'Image', 'Monster', 'Blue_Slime.png')
         if not os.path.exists(image_path):
             raise FileNotFoundError(f"Image not found: `{image_path}`")
-        self.image = load_image(image_path)
 
-        self.hp = 10
-        self.x = random.randint(100, 1100)
-        self.y_base = random.randint(100, 600)
-        self.y = self.y_base
-        self.type='monster'
+        start_x = random.randint(100, 1100)
+        start_y = random.randint(100, 600)
+
+        self.transform = self.add_component(TransformComponent(start_x, start_y, FRAME_W * SCALE, FRAME_H * SCALE))
+        self.sprite = self.add_component(SpriteComponent(load_image(image_path), FRAME_W, FRAME_H))
+        self.collision = self.add_component(CollisionComponent(width=FRAME_W * SCALE, height=FRAME_H * SCALE))
+        self.combat = self.add_component(CombatComponent(10))
+
+        self.y_base = self.transform.y
+        self.type = 'monster'
 
         # 슬라임별로 무작위의 점프 타이머 초기값 설정
         self.jump_timer = random.uniform(0.0, HOP_INTERVAL)
@@ -52,6 +66,7 @@ class Slime:
         self.anim_timer = 0.0
 
         self.dir = -1
+        self._update_sprite_flip()
 
         # 준비(anticipation) 상태 플래그
         self.preparing = False
@@ -79,6 +94,42 @@ class Slime:
 
         self.dead = False
 
+    @property
+    def x(self):
+        return self.transform.x
+
+    @x.setter
+    def x(self, value):
+        self.transform.x = value
+
+    @property
+    def y(self):
+        return self.transform.y
+
+    @y.setter
+    def y(self, value):
+        self.transform.y = value
+
+    @property
+    def frame(self):
+        return self.sprite.frame
+
+    @frame.setter
+    def frame(self, value):
+        self.sprite.frame = value
+
+    @property
+    def hp(self):
+        return self.combat.hp
+
+    @hp.setter
+    def hp(self, value):
+        self.combat.hp = max(0, min(self.combat.max_hp, value))
+
+    def _update_sprite_flip(self):
+        if self.sprite:
+            self.sprite.flip = '' if self.dir < 0 else 'h'
+
     def _start_hop(self):
         self.preparing = False
         self.hopping = True
@@ -88,9 +139,11 @@ class Slime:
         self.frame = JUMP_AIR_FRAME
         self.anim_timer = 0.0
 
-    def update(self, zag):
+    def update(self, zag=None):
         if self.dead:
             return
+
+        super().update()
 
         if self.hp <= 0 and not self.dead:
             self.dead = True
@@ -171,6 +224,7 @@ class Slime:
             self.jump_timer -= HOP_INTERVAL
             # 방향 반전 및 hop 시작
             self.dir *= -1
+            self._update_sprite_flip()
             # 준비 상태는 hop 시작과 함께 종료
             self.preparing = False
             self._start_hop()
@@ -226,19 +280,14 @@ class Slime:
                         self.dir = -1  # 플레이어가 왼쪽에 있음 (왼쪽 보기)
                     elif zag.x > self.x:
                         self.dir = 1  # 플레이어가 오른쪽에 있음 (오른쪽 보기)
+                    self._update_sprite_flip()
 
                 else:
                     # 사거리 밖이거나 쿨타임 중 (아무것도 안 함)
                     pass
 
     def draw(self):
-        left = int(self.frame) * FRAME_W
-        bottom = 0
-        draw_w = int(FRAME_W * SCALE)
-        draw_h = int(FRAME_H * SCALE)
-        flip = '' if self.dir < 0 else 'h'
-        self.image.clip_composite_draw(left, bottom, FRAME_W, FRAME_H, 0, flip,
-                                       self.x, self.y, draw_w, draw_h)
+        super().draw()
         if self.hp > 0:
             hp_bar_width = 50
             hp_bar_height = 5
@@ -258,6 +307,8 @@ class Slime:
         return dx * dx + dy * dy
 
     def get_bb(self):
+        if self.collision:
+            return self.collision.get_bb()
         half_w = (FRAME_W * SCALE) / 2
         half_h = (FRAME_H * SCALE) / 2
         return self.x - half_w, self.y - half_h, self.x + half_w, self.y + half_h
@@ -268,10 +319,14 @@ class Slime:
         pass
 
     def take_damage(self, damage):
+        if self.combat.invincible_timer > 0:
+            return
+
         self.hp -= damage
         if self.hp <= 0:
             self.hp = 0
             player = game_world.player[0]
-            # 3. 그 객체의 gold 변수를 직접 수정
             player.gold += 10
+        else:
+            self.combat.invincible_timer = 0.5
 
