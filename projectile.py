@@ -1,3 +1,4 @@
+from collision_manager import CollisionGroup
 from game_object import GameObject
 from components.component_transform import TransformComponent
 from components.component_move import MovementComponent
@@ -9,11 +10,18 @@ from components.component_projectile import ProjectileComponent
 class Projectile(GameObject):
     def __init__(self, x, y, direction, speed, damage, width, height, image=None):
         super().__init__()
-        self.type = 'projectile'
+        self.collision_group = CollisionGroup.PROJECTILE
 
         self.transform = self.add_component(TransformComponent(x, y, width, height))
         self.movement = self.add_component(MovementComponent(speed))
-        self.collision = self.add_component(CollisionComponent())
+        self.collision = self.add_component(
+            CollisionComponent(
+                group=CollisionGroup.PROJECTILE,
+                mask=CollisionGroup.MONSTER,
+                width=width,
+                height=height,
+            )
+        )
         self.projectile = self.add_component(ProjectileComponent(damage))
         self.render = None
 
@@ -27,9 +35,6 @@ class Projectile(GameObject):
         self.movement.xdir = dx
         self.movement.ydir = dy
 
-    def get_bb(self):
-        return self.collision.get_bb()
-
-    def handle_collision(self, other, group):
-        if group == 'ball:monster':
+    def handle_collision(self, other):
+        if getattr(other, "collision_group", None) == CollisionGroup.MONSTER:
             self.projectile.on_hit(other)

@@ -6,6 +6,7 @@ import game_framework
 import game_world
 from state_machine import StateMachine
 from game_object import GameObject
+from collision_manager import CollisionGroup
 from components.component_transform import TransformComponent
 from components.component_sprite import SpriteComponent
 from components.component_move import MovementComponent
@@ -14,6 +15,7 @@ from components.component_attack import AttackComponent
 from components.component_skill import SkillComponent
 from components.component_input import InputComponent
 from components.component_hud import HUDComponent
+from components.component_collision import CollisionComponent
 
 
 def space_down(e):  # e is space down ?
@@ -160,6 +162,15 @@ class Zag(GameObject):
             )
         )
         self.hud_component = self.add_component(HUDComponent())
+        self.collision_group = CollisionGroup.PLAYER
+        self.collision = self.add_component(
+            CollisionComponent(
+                group=CollisionGroup.PLAYER,
+                mask=CollisionGroup.MONSTER,
+                width=self.transform.w - 20,
+                height=self.transform.h - 20,
+            )
+        )
 
         self.mp = 100
         self.attack_cooldown = 1.0
@@ -167,7 +178,6 @@ class Zag(GameObject):
         self.hp_potions = 3
         self.mp_potions = 3
         self.gold = 0
-        self.type = 'player'
 
         self.IDLE = Idle(self)
         self.RUN = Run(self)
@@ -298,14 +308,8 @@ class Zag(GameObject):
         if self.input_component:
             self.input_component.handle_event(event)
 
-    def get_bb(self):
-        return self.x - (self.w / 2) + 10, \
-               self.y - (self.h / 2) + 10, \
-               self.x + (self.w / 2) - 10, \
-               self.y + (self.h / 2) - 10
-
-    def handle_collision(self, other, group):
-        if group == 'zag:slime':
+    def handle_collision(self, other):
+        if getattr(other, "collision_group", None) == CollisionGroup.MONSTER:
             if self.invincibleTimer <= 0.0:
                 self.hp -= 10
                 print(f'Zag HP: {self.hp}')
