@@ -20,6 +20,10 @@ class MovementComponent(Component):
         if not tr:
             return
 
+        state_machine = getattr(self.owner, 'state_machine', None)
+        if state_machine and state_machine.is_attacking():
+            return
+
         # 방향 유지
         if self.xdir != 0:
             self.face_dir = self.xdir
