@@ -7,10 +7,12 @@ import game_framework
 import game_world
 
 from behavior_tree import Action, BehaviorTree, Condition, Selector, Sequence
+from collision_manager import CollisionGroup
 from components.component_combat import CombatComponent
 from components.component_collision import CollisionComponent
 from components.component_move import MovementComponent, MovementType
 from components.component_perception import PerceptionComponent
+from components.component_projectile import ProjectileComponent
 from components.component_sprite import SpriteComponent
 from components.component_transform import TransformComponent
 from game_object import GameObject
@@ -55,7 +57,15 @@ class Slime(GameObject):
 
         self.transform = self.add_component(TransformComponent(start_x, start_y, FRAME_W * SCALE, FRAME_H * SCALE))
         self.sprite = self.add_component(SpriteComponent(load_image(image_path), FRAME_W, FRAME_H))
-        self.collision = self.add_component(CollisionComponent(width=FRAME_W * SCALE, height=FRAME_H * SCALE))
+        self.collision_group = CollisionGroup.MONSTER
+        self.collision = self.add_component(
+            CollisionComponent(
+                group=CollisionGroup.MONSTER,
+                mask=CollisionGroup.PLAYER | CollisionGroup.PROJECTILE,
+                width=FRAME_W * SCALE,
+                height=FRAME_H * SCALE,
+            )
+        )
         self.combat = self.add_component(CombatComponent(10))
         self.movement = self.add_component(MovementComponent())
         self.perception = self.add_component(
@@ -63,7 +73,6 @@ class Slime(GameObject):
         )
 
         self.y_base = self.transform.y
-        self.type = 'monster'
 
         self.jump_timer = random.uniform(0.0, HOP_INTERVAL)
         self.frame = JUMP_LAND_FRAME
@@ -298,17 +307,15 @@ class Slime(GameObject):
         dy = self.y - zag.y
         return dx * dx + dy * dy
 
-    def get_bb(self):
-        if self.collision:
-            return self.collision.get_bb()
-        half_w = (FRAME_W * SCALE) / 2
-        half_h = (FRAME_H * SCALE) / 2
-        return self.x - half_w, self.y - half_h, self.x + half_w, self.y + half_h
-
-    def handle_collision(self, group, other):
-        if group == 'ball:monster':
-            self.take_damage(other.damage)
-        pass
+    def handle_collision(self, other):
+        if getattr(other, "collision_group", None) == CollisionGroup.PROJECTILE:
+            projectile_comp = other.get(ProjectileComponent)
+            if projectile_comp:
+                projectile_comp.on_hit(self)
+        elif getattr(other, "collision_group", None) == CollisionGroup.PLAYER:
+            if hasattr(other, "invincibleTimer") and other.invincibleTimer <= 0.0:
+                other.hp -= 10
+                other.invincibleTimer = 1.0
 
     def take_damage(self, damage):
         if self.combat.invincible_timer > 0:

@@ -22,3 +22,11 @@ class GameObject:
     def draw(self):
         for c in self.components:
             c.draw()
+
+    def get_bb(self):
+        from components.component_collision import CollisionComponent
+
+        collision = self.get(CollisionComponent)
+        if collision:
+            return collision.get_bb()
+        return 0, 0, 0, 0
