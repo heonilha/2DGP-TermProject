@@ -1,9 +1,13 @@
 import os
+import random
+
 from pico2d import *
+
 import game_framework
 import game_world
-import math
-import random
+from components.component_sprite import SpriteComponent
+from components.component_transform import TransformComponent
+from game_object import GameObject
 
 # 상수
 FRAME_W = 21
@@ -32,34 +36,39 @@ ATTACK_DASH_DURATION = 0.2       # 실제 돌진(dash)에 걸리는 시간
 
 
 
-class Slime:
+class Slime(GameObject):
     def __init__(self):
+        super().__init__()
         base_dir = os.path.dirname(__file__)
         image_path = os.path.join(base_dir, 'resource', 'Image', 'Monster', 'Blue_Slime.png')
         if not os.path.exists(image_path):
             raise FileNotFoundError(f"Image not found: `{image_path}`")
-        self.image = load_image(image_path)
+        image = load_image(image_path)
+
+        x = random.randint(100, 1100)
+        y = random.randint(100, 600)
+        self.transform = self.add_component(TransformComponent(x=x, y=y, w=FRAME_W * SCALE, h=FRAME_H * SCALE))
+        self.sprite = self.add_component(SpriteComponent(image, FRAME_W, FRAME_H))
 
         self.hp = 10
-        self.x = random.randint(100, 1100)
-        self.y_base = random.randint(100, 600)
-        self.y = self.y_base
-        self.type='monster'
+        self.y_base = self.transform.y
+        self.type = 'monster'
 
         # 슬라임별로 무작위의 점프 타이머 초기값 설정
         self.jump_timer = random.uniform(0.0, HOP_INTERVAL)
-        self.frame = JUMP_LAND_FRAME
+        self.sprite.frame = JUMP_LAND_FRAME
         self.anim_timer = 0.0
 
         self.dir = -1
+        self.sprite.flip = 'h'
 
         # 준비(anticipation) 상태 플래그
         self.preparing = False
 
         self.hopping = False
         self.hop_timer = 0.0
-        self.hop_start_x = self.x
-        self.hop_target_x = self.x
+        self.hop_start_x = self.transform.x
+        self.hop_target_x = self.transform.x
 
         # 공격 관련 변수 초기화
         self.attack_range_squared = ATTACK_RANGE * ATTACK_RANGE
@@ -79,13 +88,29 @@ class Slime:
 
         self.dead = False
 
+    @property
+    def x(self):
+        return self.transform.x
+
+    @x.setter
+    def x(self, value):
+        self.transform.x = value
+
+    @property
+    def y(self):
+        return self.transform.y
+
+    @y.setter
+    def y(self, value):
+        self.transform.y = value
+
     def _start_hop(self):
         self.preparing = False
         self.hopping = True
         self.hop_timer = 0.0
-        self.hop_start_x = self.x
-        self.hop_target_x = self.x + self.dir * HOP_DISTANCE
-        self.frame = JUMP_AIR_FRAME
+        self.hop_start_x = self.transform.x
+        self.hop_target_x = self.transform.x + self.dir * HOP_DISTANCE
+        self.sprite.frame = JUMP_AIR_FRAME
         self.anim_timer = 0.0
 
     def update(self, zag):
@@ -105,11 +130,11 @@ class Slime:
             if self.attack_anim_timer >= self.attack_anim_speed:
                 self.attack_anim_timer -= self.attack_anim_speed
 
-                if self.frame < 4:
-                    self.frame += 1  # 프레임 0 -> 1 -> 2 -> 3
+                if self.sprite.frame < 4:
+                    self.sprite.frame += 1  # 프레임 0 -> 1 -> 2 -> 3
 
                 # "프레임이 4가 되고"
-                if self.frame == 4:
+                if self.sprite.frame == 4:
                     self.attack_state = 'hold'  # 'hold' 상태로 변경
                     self.hold_timer = 0.0  # 'hold' 타이머 리셋
 
@@ -119,7 +144,7 @@ class Slime:
             # 1-2. 'hold' 상태: 프레임 4에서 1초 대기
         elif self.attack_state == 'hold':
             # "움직이지 않음"
-            self.frame = 4  # 프레임 4로 고정
+            self.sprite.frame = 4  # 프레임 4로 고정
 
             self.hold_timer += dt
             # "1초 기다렸다가"
@@ -138,13 +163,13 @@ class Slime:
             if t >= 1.0:
                 # 돌진 완료
                 self.attack_state = 'none'  # 평상시 상태로 복귀
-                self.x, self.y = self.attack_target_pos
-                self.y_base = self.y  # y_base 갱신 (중요!)
+                self.transform.x, self.transform.y = self.attack_target_pos
+                self.y_base = self.transform.y  # y_base 갱신 (중요!)
                 self.attack_cooltime_timer = 0.0  # 쿨타임 시작
             else:
                 # 돌진 중 (선형 보간)
-                self.x = (1 - t) * self.attack_start_pos[0] + t * self.attack_target_pos[0]
-                self.y = (1 - t) * self.attack_start_pos[1] + t * self.attack_target_pos[1]
+                self.transform.x = (1 - t) * self.attack_start_pos[0] + t * self.attack_target_pos[0]
+                self.transform.y = (1 - t) * self.attack_start_pos[1] + t * self.attack_target_pos[1]
 
             # 다른 모든 로직 건너뛰기
             return
@@ -164,7 +189,7 @@ class Slime:
             self.preparing = True
             self.anim_timer = 0.0
             # 준비 시작 시 프레임를 공격/예고 애니메이션의 첫 프레임으로 두고 애니 재생 시작
-            self.frame = 0
+            self.sprite.frame = 0
 
         # hop 발동
         if self.jump_timer >= HOP_INTERVAL:
@@ -179,18 +204,18 @@ class Slime:
         if self.hopping:
             self.hop_timer += dt
             t = min(self.hop_timer / HOP_DURATION, 1.0)
-            self.x = self.hop_start_x + (self.hop_target_x - self.hop_start_x) * t
+            self.transform.x = self.hop_start_x + (self.hop_target_x - self.hop_start_x) * t
             bounce = 4.0 * t * (1.0 - t)
-            self.y = self.y_base + bounce * HOP_HEIGHT
+            self.transform.y = self.y_base + bounce * HOP_HEIGHT
             # 공중에서는 공중 프레임 유지
-            self.frame = JUMP_AIR_FRAME
+            self.sprite.frame = JUMP_AIR_FRAME
             if t >= 1.0:
                 # 착지: 위치 확정, 착지 프레임 설정
                 self.hopping = False
                 self.hop_timer = 0.0
-                self.x = self.hop_target_x
-                self.y = self.y_base
-                self.frame = JUMP_LAND_FRAME
+                self.transform.x = self.hop_target_x
+                self.transform.y = self.y_base
+                self.sprite.frame = JUMP_LAND_FRAME
                 self.anim_timer = 0.0
         else:
             # 준비 상태일 때만 애니메이션 재생(예고)
@@ -199,26 +224,26 @@ class Slime:
                 if self.anim_timer >= ANIM_SPEED:
                     self.anim_timer -= ANIM_SPEED
                     # 준비 애니메이션은 전체 프레임을 순환
-                    self.frame = (self.frame + 1) % FRAMES_COUNT
+                    self.sprite.frame = (self.sprite.frame + 1) % FRAMES_COUNT
             else:
                 # 평상시: 애니메이션 없음, 항상 착지 프레임 유지
-                self.frame = JUMP_LAND_FRAME
+                self.sprite.frame = JUMP_LAND_FRAME
                 self.anim_timer = 0.0
 
                 # 플레이어와의 거리 제곱 계산
-                distance_sq = (zag.x - self.x) ** 2 + (zag.y - self.y) ** 2
+                distance_sq = (zag.x - self.transform.x) ** 2 + (zag.y - self.transform.y) ** 2
 
                 # 사거리 내 + 쿨타임 완료 = 공격 시작!
                 if (distance_sq <= self.attack_range_squared) and (self.attack_cooltime_timer >= self.attack_cooltime):
 
                     # --- 💥 공격 시작! (상태 변경) ---
                     self.attack_state = 'prepare'  # 'prepare' 상태로 진입
-                    self.frame = 0  # 공격 애니메이션 0번 프레임부터
+                    self.sprite.frame = 0  # 공격 애니메이션 0번 프레임부터
                     self.attack_anim_timer = 0.0  # 공격 애니메이션 타이머 리셋
 
                     # "현재" 슬라임 위치와 "현재" 플레이어 위치를 저장
                     # 이 값들은 돌진이 끝날 때까지 바뀌지 않음
-                    self.attack_start_pos = (self.x, self.y)
+                    self.attack_start_pos = (self.transform.x, self.transform.y)
                     self.attack_target_pos = (zag.x, zag.y)
 
                     # 플레이어의 x좌표와 비교하여 방향(dir)을 설정합니다.
@@ -232,18 +257,13 @@ class Slime:
                     pass
 
     def draw(self):
-        left = int(self.frame) * FRAME_W
-        bottom = 0
-        draw_w = int(FRAME_W * SCALE)
-        draw_h = int(FRAME_H * SCALE)
-        flip = '' if self.dir < 0 else 'h'
-        self.image.clip_composite_draw(left, bottom, FRAME_W, FRAME_H, 0, flip,
-                                       self.x, self.y, draw_w, draw_h)
+        self.sprite.flip = '' if self.dir < 0 else 'h'
+        super().draw()
         if self.hp > 0:
             hp_bar_width = 50
             hp_bar_height = 5
-            hp_bar_x = self.x - hp_bar_width // 2
-            hp_bar_y = self.y + 40
+            hp_bar_x = self.transform.x - hp_bar_width // 2
+            hp_bar_y = self.transform.y + 40
 
             # 배경 (회색) - 색상을 튜플이 아닌 정수 인자로 전달
             draw_rectangle(hp_bar_x, hp_bar_y, hp_bar_x + hp_bar_width, hp_bar_y + hp_bar_height, 100, 100, 100)
@@ -253,14 +273,14 @@ class Slime:
             draw_rectangle(hp_bar_x, hp_bar_y, hp_bar_x + current_hp_width, hp_bar_y + hp_bar_height, 255, 0, 0)
 
     def get_distance_to_zag_sq(self, zag):
-        dx = self.x - zag.x
-        dy = self.y - zag.y
+        dx = self.transform.x - zag.x
+        dy = self.transform.y - zag.y
         return dx * dx + dy * dy
 
     def get_bb(self):
-        half_w = (FRAME_W * SCALE) / 2
-        half_h = (FRAME_H * SCALE) / 2
-        return self.x - half_w, self.y - half_h, self.x + half_w, self.y + half_h
+        half_w = self.transform.w / 2
+        half_h = self.transform.h / 2
+        return self.transform.x - half_w, self.transform.y - half_h, self.transform.x + half_w, self.transform.y + half_h
 
     def handle_collision(self, group, other):
         if group == 'ball:monster':
