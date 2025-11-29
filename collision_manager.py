@@ -14,12 +14,20 @@ class CollisionManager:
         self.components = []
 
     def register(self, obj):
-        component = obj.get(CollisionComponent)
+        getter = getattr(obj, "get", None)
+        if not callable(getter):
+            return
+
+        component = getter(CollisionComponent)
         if component and component not in self.components:
             self.components.append(component)
 
     def unregister(self, obj):
-        component = obj.get(CollisionComponent)
+        getter = getattr(obj, "get", None)
+        if not callable(getter):
+            return
+
+        component = getter(CollisionComponent)
         if component and component in self.components:
             self.components.remove(component)
 

@@ -8,7 +8,7 @@ class StageIcon:
         self.x, self.y = x, y
         self.image = load_image(image_path)
         self.w, self.h = self.image.w, self.image.h
-        self.target_mode = target_mode # ◀ 클릭 시 이동할 '모드'
+        self.target_mode = target_mode  # ◀ 클릭 시 이동할 '모드'
 
     def get_bb(self):
         # 마우스 충돌을 위한 사각형 범위
