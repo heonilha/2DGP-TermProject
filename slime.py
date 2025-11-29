@@ -10,6 +10,7 @@ from behavior_tree import Action, BehaviorTree, Condition, Selector, Sequence
 from collision_manager import CollisionGroup
 from components.component_combat import CombatComponent
 from components.component_collision import CollisionComponent
+from components.component_hud import HUDComponent
 from components.component_move import MovementComponent, MovementType
 from components.component_perception import PerceptionComponent
 from components.component_projectile import ProjectileComponent
@@ -71,6 +72,7 @@ class Slime(GameObject):
         self.perception = self.add_component(
             PerceptionComponent(ATTACK_RANGE, target_getter=lambda: game_world.player[0] if game_world.player else None)
         )
+        self.hud = self.add_component(HUDComponent())
 
         self.y_base = self.transform.y
 
@@ -291,16 +293,6 @@ class Slime(GameObject):
 
     def draw(self):
         super().draw()
-        if self.hp > 0:
-            hp_bar_width = 50
-            hp_bar_height = 5
-            hp_bar_x = self.x - hp_bar_width // 2
-            hp_bar_y = self.y + 40
-
-            draw_rectangle(hp_bar_x, hp_bar_y, hp_bar_x + hp_bar_width, hp_bar_y + hp_bar_height, 100, 100, 100)
-
-            current_hp_width = int(hp_bar_width * (self.hp / 10))
-            draw_rectangle(hp_bar_x, hp_bar_y, hp_bar_x + current_hp_width, hp_bar_y + hp_bar_height, 255, 0, 0)
 
     def get_distance_to_zag_sq(self, zag):
         dx = self.x - zag.x
@@ -313,18 +305,6 @@ class Slime(GameObject):
             if projectile_comp:
                 projectile_comp.on_hit(self)
         elif getattr(other, "collision_group", None) == CollisionGroup.PLAYER:
-            if hasattr(other, "invincibleTimer") and other.invincibleTimer <= 0.0:
-                other.hp -= 10
-                other.invincibleTimer = 1.0
-
-    def take_damage(self, damage):
-        if self.combat.invincible_timer > 0:
-            return
-
-        self.hp -= damage
-        if self.hp <= 0:
-            self.hp = 0
-            player = game_world.player[0]
-            player.gold += 10
-        else:
-            self.combat.invincible_timer = 0.5
+            combat = getattr(other, "combat", None)
+            if combat:
+                combat.take_damage(10)
