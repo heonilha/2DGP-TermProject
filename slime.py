@@ -1,17 +1,19 @@
 import os
 import random
-import math
 
 from pico2d import *
 
 import game_framework
 import game_world
 
-from game_object import GameObject
-from components.component_transform import TransformComponent
-from components.component_sprite import SpriteComponent
-from components.component_collision import CollisionComponent
+from behavior_tree import Action, BehaviorTree, Condition, Selector, Sequence
 from components.component_combat import CombatComponent
+from components.component_collision import CollisionComponent
+from components.component_move import MovementComponent, MovementType
+from components.component_perception import PerceptionComponent
+from components.component_sprite import SpriteComponent
+from components.component_transform import TransformComponent
+from game_object import GameObject
 
 # 상수
 FRAME_W = 21
@@ -39,7 +41,6 @@ ATTACK_HOLD_DURATION = 0.5       # 공격 전 1초 대기 시간
 ATTACK_DASH_DURATION = 0.2       # 실제 돌진(dash)에 걸리는 시간
 
 
-
 class Slime(GameObject):
     def __init__(self):
         super().__init__()
@@ -56,11 +57,14 @@ class Slime(GameObject):
         self.sprite = self.add_component(SpriteComponent(load_image(image_path), FRAME_W, FRAME_H))
         self.collision = self.add_component(CollisionComponent(width=FRAME_W * SCALE, height=FRAME_H * SCALE))
         self.combat = self.add_component(CombatComponent(10))
+        self.movement = self.add_component(MovementComponent())
+        self.perception = self.add_component(
+            PerceptionComponent(ATTACK_RANGE, target_getter=lambda: game_world.player[0] if game_world.player else None)
+        )
 
         self.y_base = self.transform.y
         self.type = 'monster'
 
-        # 슬라임별로 무작위의 점프 타이머 초기값 설정
         self.jump_timer = random.uniform(0.0, HOP_INTERVAL)
         self.frame = JUMP_LAND_FRAME
         self.anim_timer = 0.0
@@ -68,31 +72,31 @@ class Slime(GameObject):
         self.dir = -1
         self._update_sprite_flip()
 
-        # 준비(anticipation) 상태 플래그
         self.preparing = False
-
         self.hopping = False
-        self.hop_timer = 0.0
-        self.hop_start_x = self.x
-        self.hop_target_x = self.x
 
-        # 공격 관련 변수 초기화
         self.attack_range_squared = ATTACK_RANGE * ATTACK_RANGE
         self.attack_state = 'none'
-
         self.attack_cooltime = ATTACK_COOLTIME
         self.attack_cooltime_timer = self.attack_cooltime
-
         self.attack_anim_timer = 0.0
         self.attack_anim_speed = ATTACK_ANIM_SPEED
-
         self.hold_duration = ATTACK_HOLD_DURATION
         self.hold_timer = 0.0
-
         self.attack_duration = ATTACK_DASH_DURATION
         self.attack_timer = 0.0
+        self.attack_dash_started = False
 
         self.dead = False
+
+        self.bt = BehaviorTree(
+            Selector(
+                'SlimeSelector',
+                Sequence('HandleAttack', Condition('IsAttacking', self.is_attacking), Action('RunAttack', self.run_attack)),
+                Sequence('StartAttack', Condition('CanAttack', self.can_attack), Action('BeginAttack', self.begin_attack)),
+                Action('HandleHop', self.handle_hop),
+            )
+        )
 
     @property
     def x(self):
@@ -130,161 +134,151 @@ class Slime(GameObject):
         if self.sprite:
             self.sprite.flip = '' if self.dir < 0 else 'h'
 
-    def _start_hop(self):
-        self.preparing = False
-        self.hopping = True
-        self.hop_timer = 0.0
-        self.hop_start_x = self.x
-        self.hop_target_x = self.x + self.dir * HOP_DISTANCE
-        self.frame = JUMP_AIR_FRAME
+    def _finish_hop(self):
+        self.hopping = False
+        self.x = self.transform.x
+        self.y = self.y_base
+        self.frame = JUMP_LAND_FRAME
         self.anim_timer = 0.0
+
+    def _update_prepare_animation(self, dt):
+        self.anim_timer += dt
+        if self.anim_timer >= ANIM_SPEED:
+            self.anim_timer -= ANIM_SPEED
+            self.frame = (self.frame + 1) % FRAMES_COUNT
 
     def update(self, zag=None):
         if self.dead:
             return
 
-        super().update()
-
         if self.hp <= 0 and not self.dead:
             self.dead = True
             game_world.remove_object(self)
+            return
 
+        self.perception.set_target(zag)
+
+        self.bt.run()
+        super().update()
+
+    def is_attacking(self):
+        return BehaviorTree.SUCCESS if self.attack_state != 'none' else BehaviorTree.FAIL
+
+    def can_attack(self):
+        if self.attack_state != 'none' or self.hopping or self.preparing:
+            return BehaviorTree.FAIL
+
+        distance_sq = self.perception.distance_sq_to_target()
+        if distance_sq is None:
+            return BehaviorTree.FAIL
+
+        if distance_sq <= self.attack_range_squared and self.attack_cooltime_timer >= self.attack_cooltime:
+            return BehaviorTree.SUCCESS
+        return BehaviorTree.FAIL
+
+    def begin_attack(self):
+        target = self.perception.get_target()
+        if not target:
+            return BehaviorTree.FAIL
+
+        self.attack_state = 'prepare'
+        self.frame = 0
+        self.attack_anim_timer = 0.0
+        self.attack_start_pos = (self.x, self.y)
+        self.attack_target_pos = (target.x, target.y)
+        self.attack_dash_started = False
+
+        if target.x < self.x:
+            self.dir = -1
+        elif target.x > self.x:
+            self.dir = 1
+        self._update_sprite_flip()
+        return BehaviorTree.RUNNING
+
+    def run_attack(self):
         dt = game_framework.frame_time
 
         if self.attack_state == 'prepare':
-            # "움직이지 않음" (즉, 위치 이동 코드가 없음)
-
             self.attack_anim_timer += dt
             if self.attack_anim_timer >= self.attack_anim_speed:
                 self.attack_anim_timer -= self.attack_anim_speed
-
                 if self.frame < 4:
-                    self.frame += 1  # 프레임 0 -> 1 -> 2 -> 3
-
-                # "프레임이 4가 되고"
+                    self.frame += 1
                 if self.frame == 4:
-                    self.attack_state = 'hold'  # 'hold' 상태로 변경
-                    self.hold_timer = 0.0  # 'hold' 타이머 리셋
+                    self.attack_state = 'hold'
+                    self.hold_timer = 0.0
+            return BehaviorTree.RUNNING
 
-            # 다른 모든 로직(점프 등)을 건너뛰어야 함
-            return
-
-            # 1-2. 'hold' 상태: 프레임 4에서 1초 대기
-        elif self.attack_state == 'hold':
-            # "움직이지 않음"
-            self.frame = 4  # 프레임 4로 고정
-
+        if self.attack_state == 'hold':
+            self.frame = 4
             self.hold_timer += dt
-            # "1초 기다렸다가"
             if self.hold_timer >= self.hold_duration:
-                self.attack_state = 'dash'  # 'dash' 상태로 변경
-                self.attack_timer = 0.0  # 'dash' 타이머 리셋
+                self.attack_state = 'dash'
+                self.attack_timer = 0.0
+            return BehaviorTree.RUNNING
 
-            # 다른 모든 로직 건너뛰기
-            return
+        if self.attack_state == 'dash':
+            if not self.attack_dash_started:
+                self.movement.start_linear(
+                    self.attack_start_pos,
+                    self.attack_target_pos,
+                    self.attack_duration,
+                    on_complete=self._finish_attack_dash,
+                )
+                self.attack_dash_started = True
+                return BehaviorTree.RUNNING
 
-            # 1-3. 'dash' 상태: 목표 지점으로 돌진 (기존 is_attacking 로직)
-        elif self.attack_state == 'dash':
-            self.attack_timer += dt
-            t = self.attack_timer / self.attack_duration
+            if self.movement.is_path_active():
+                return BehaviorTree.RUNNING
 
-            if t >= 1.0:
-                # 돌진 완료
-                self.attack_state = 'none'  # 평상시 상태로 복귀
-                self.x, self.y = self.attack_target_pos
-                self.y_base = self.y  # y_base 갱신 (중요!)
-                self.attack_cooltime_timer = 0.0  # 쿨타임 시작
-            else:
-                # 돌진 중 (선형 보간)
-                self.x = (1 - t) * self.attack_start_pos[0] + t * self.attack_target_pos[0]
-                self.y = (1 - t) * self.attack_start_pos[1] + t * self.attack_target_pos[1]
+        return BehaviorTree.SUCCESS
 
-            # 다른 모든 로직 건너뛰기
-            return
+    def _finish_attack_dash(self):
+        self.attack_state = 'none'
+        self.attack_cooltime_timer = 0.0
+        self.y_base = self.y
+        self.attack_dash_started = False
 
-            # ------------------------------------
-            # --- 2. 'none' 상태 (평상시: 점프 & 공격 감지) ---
-            # ------------------------------------
-            # (self.attack_state가 'none'일 때만 아래 코드가 실행됨)
+    def handle_hop(self):
+        dt = game_framework.frame_time
 
-            # 쿨타임 갱신 (공격 중이 아닐 때만 시간이 흐름)
-        self.attack_cooltime_timer += dt
-        # hop 타이머 업데이트
-        self.jump_timer += dt
+        if self.attack_state == 'none':
+            self.attack_cooltime_timer += dt
 
-        # 준비 상태 진입: HOP_INTERVAL - PREPARE_TIME 시점
+        if not self.hopping and not self.preparing and not self.movement.is_path_active():
+            self.jump_timer += dt
+
         if (not self.hopping) and (not self.preparing) and (self.jump_timer >= max(0.0, HOP_INTERVAL - PREPARE_TIME)):
             self.preparing = True
             self.anim_timer = 0.0
-            # 준비 시작 시 프레임를 공격/예고 애니메이션의 첫 프레임으로 두고 애니 재생 시작
             self.frame = 0
 
-        # hop 발동
         if self.jump_timer >= HOP_INTERVAL:
             self.jump_timer -= HOP_INTERVAL
-            # 방향 반전 및 hop 시작
             self.dir *= -1
             self._update_sprite_flip()
-            # 준비 상태는 hop 시작과 함께 종료
             self.preparing = False
-            self._start_hop()
-
-        # hop 진행: 위치 보간 + 포물선형 바운스
-        if self.hopping:
-            self.hop_timer += dt
-            t = min(self.hop_timer / HOP_DURATION, 1.0)
-            self.x = self.hop_start_x + (self.hop_target_x - self.hop_start_x) * t
-            bounce = 4.0 * t * (1.0 - t)
-            self.y = self.y_base + bounce * HOP_HEIGHT
-            # 공중에서는 공중 프레임 유지
+            self.hopping = True
             self.frame = JUMP_AIR_FRAME
-            if t >= 1.0:
-                # 착지: 위치 확정, 착지 프레임 설정
-                self.hopping = False
-                self.hop_timer = 0.0
-                self.x = self.hop_target_x
-                self.y = self.y_base
-                self.frame = JUMP_LAND_FRAME
-                self.anim_timer = 0.0
+            self.movement.start_parabolic(
+                (self.x, self.y_base),
+                (self.x + self.dir * HOP_DISTANCE, self.y_base),
+                HOP_HEIGHT,
+                HOP_DURATION,
+                on_complete=self._finish_hop,
+            )
+            return BehaviorTree.RUNNING
+
+        if self.movement.type == MovementType.PARABOLIC:
+            self.frame = JUMP_AIR_FRAME
         else:
-            # 준비 상태일 때만 애니메이션 재생(예고)
             if self.preparing:
-                self.anim_timer += dt
-                if self.anim_timer >= ANIM_SPEED:
-                    self.anim_timer -= ANIM_SPEED
-                    # 준비 애니메이션은 전체 프레임을 순환
-                    self.frame = (self.frame + 1) % FRAMES_COUNT
+                self._update_prepare_animation(dt)
             else:
-                # 평상시: 애니메이션 없음, 항상 착지 프레임 유지
                 self.frame = JUMP_LAND_FRAME
                 self.anim_timer = 0.0
 
-                # 플레이어와의 거리 제곱 계산
-                distance_sq = (zag.x - self.x) ** 2 + (zag.y - self.y) ** 2
-
-                # 사거리 내 + 쿨타임 완료 = 공격 시작!
-                if (distance_sq <= self.attack_range_squared) and (self.attack_cooltime_timer >= self.attack_cooltime):
-
-                    # --- 💥 공격 시작! (상태 변경) ---
-                    self.attack_state = 'prepare'  # 'prepare' 상태로 진입
-                    self.frame = 0  # 공격 애니메이션 0번 프레임부터
-                    self.attack_anim_timer = 0.0  # 공격 애니메이션 타이머 리셋
-
-                    # "현재" 슬라임 위치와 "현재" 플레이어 위치를 저장
-                    # 이 값들은 돌진이 끝날 때까지 바뀌지 않음
-                    self.attack_start_pos = (self.x, self.y)
-                    self.attack_target_pos = (zag.x, zag.y)
-
-                    # 플레이어의 x좌표와 비교하여 방향(dir)을 설정합니다.
-                    if zag.x < self.x:
-                        self.dir = -1  # 플레이어가 왼쪽에 있음 (왼쪽 보기)
-                    elif zag.x > self.x:
-                        self.dir = 1  # 플레이어가 오른쪽에 있음 (오른쪽 보기)
-                    self._update_sprite_flip()
-
-                else:
-                    # 사거리 밖이거나 쿨타임 중 (아무것도 안 함)
-                    pass
+        return BehaviorTree.RUNNING
 
     def draw(self):
         super().draw()
@@ -294,10 +288,8 @@ class Slime(GameObject):
             hp_bar_x = self.x - hp_bar_width // 2
             hp_bar_y = self.y + 40
 
-            # 배경 (회색) - 색상을 튜플이 아닌 정수 인자로 전달
             draw_rectangle(hp_bar_x, hp_bar_y, hp_bar_x + hp_bar_width, hp_bar_y + hp_bar_height, 100, 100, 100)
 
-            # 현재 HP (초록색)
             current_hp_width = int(hp_bar_width * (self.hp / 10))
             draw_rectangle(hp_bar_x, hp_bar_y, hp_bar_x + current_hp_width, hp_bar_y + hp_bar_height, 255, 0, 0)
 
@@ -329,4 +321,3 @@ class Slime(GameObject):
             player.gold += 10
         else:
             self.combat.invincible_timer = 0.5
-
