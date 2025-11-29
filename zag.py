@@ -11,11 +11,8 @@ from components.component_transform import TransformComponent
 from components.component_sprite import SpriteComponent
 from components.component_move import MovementComponent
 from components.component_combat import CombatComponent
-
-
 def space_down(e):  # e is space down ?
     return e[0] == 'INPUT' and e[1].type == SDL_KEYDOWN and e[1].key == SDLK_SPACE
-
 
 def event_stop(e):
     return e[0] == 'STOP'
@@ -205,7 +202,6 @@ class Zag(GameObject):
         self.attack_image = load_image(attack_path)
         self.movement = self.add_component(MovementComponent(RUN_SPEED_PPS))
         self.combat = self.add_component(CombatComponent(100))
-
         self.mp = 100
         self.attack_cooldown = 1.0  # 공격 쿨타임 (예: 1.0초)
         self.attack_cooldown_timer = 0.0  # 쿨타임 계산용 타이머 (0이 되어야 공격 가능)
