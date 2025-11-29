@@ -282,15 +282,15 @@ class Zag(GameObject):
             should_draw_body = int(self.invincibleTimer * 10) % 2 == 0
 
         sprite = self.sprite
-        original_image = None
-        if not should_draw_body and sprite:
-            original_image = sprite.image
-            sprite.image = None
+        original_visible = None
+        if sprite:
+            original_visible = sprite.visible
+            sprite.visible = should_draw_body
 
         super().draw()
 
-        if original_image is not None:
-            sprite.image = original_image
+        if original_visible is not None:
+            sprite.visible = original_visible
 
         self.state_machine.draw()
 

@@ -8,10 +8,11 @@ class SpriteComponent(Component):
         self.frame_h = frame_h
         self.frame = 0
         self.flip = ''  # '' or 'h'
+        self.visible = True
 
     def draw(self):
         tr = self.owner.get(TransformComponent)
-        if not tr:
+        if not tr or not self.image or not self.visible:
             return
 
         self.image.clip_composite_draw(
