@@ -147,7 +147,7 @@ class Zag(GameObject):
         ]
         self.movement = self.add_component(MovementComponent(RUN_SPEED_PPS))
         self.combat = self.add_component(CombatComponent(100))
-        self.attack_component = self.add_component(AttackComponent(self.attack_images, duration=0.7))
+        self.attack_component = self.add_component(AttackComponent(self.attack_images, duration=0.45, scale=0.7))
         self.skill_component = self.add_component(SkillComponent(mp_cost=10))
         self.input_component = self.add_component(
             InputComponent(
