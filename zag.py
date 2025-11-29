@@ -148,7 +148,7 @@ class Zag(GameObject):
             load_image(os.path.join(attack_dir, f'Attack{i}.png')) for i in range(1, 8)
         ]
         self.movement = self.add_component(MovementComponent(RUN_SPEED_PPS))
-        self.combat = self.add_component(CombatComponent(100))
+        self.combat = self.add_component(CombatComponent(100, invincible_duration=1.0, enable_invincibility=True))
         self.attack_component = self.add_component(AttackComponent(self.attack_images, duration=0.45, scale=0.7))
         self.skill_component = self.add_component(SkillComponent(mp_cost=10))
         self.input_component = self.add_component(
@@ -310,8 +310,8 @@ class Zag(GameObject):
 
     def handle_collision(self, other):
         if getattr(other, "collision_group", None) == CollisionGroup.MONSTER:
-            if self.invincibleTimer <= 0.0:
-                self.hp -= 10
+            prev_hp = self.hp
+            self.combat.take_damage(10)
+            if self.hp < prev_hp:
                 print(f'Zag HP: {self.hp}')
-                self.invincibleTimer = 1.0
 
