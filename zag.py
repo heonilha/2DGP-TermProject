@@ -6,6 +6,13 @@ import game_framework
 import game_world
 from state_machine import StateMachine
 from fire_ball import FireBall
+from game_object import GameObject
+from components.component_transform import TransformComponent
+from components.component_sprite import SpriteComponent
+from components.component_move import MovementComponent
+from components.component_combat import CombatComponent
+
+
 def space_down(e):  # e is space down ?
     return e[0] == 'INPUT' and e[1].type == SDL_KEYDOWN and e[1].key == SDLK_SPACE
 
@@ -25,6 +32,8 @@ def event_attack(e):
 def event_timeout(e):
     # 'TIME_OUT' 이벤트 (타이머가 다 되었을 때)
     return e[0] == 'TIME_OUT'
+
+BASE_DIR = os.path.dirname(__file__)
 
 PIXEL_PER_METER = (10.0 / 0.5)  # 10 pixel 50 cm
 RUN_SPEED_KMPH = 20.0  # Km / Hour
@@ -57,8 +66,6 @@ class Attack:
         pass
 
     def do(self):
-        self.zag.x += self.zag.xdir * RUN_SPEED_PPS * game_framework.frame_time
-        self.zag.y += self.zag.ydir * RUN_SPEED_PPS * game_framework.frame_time
         self.attack_timer -= game_framework.frame_time
 
         # ◀◀◀ 공격 판정 시간 (예: 0.3초 중 0.1초~0.2초 사이)
@@ -102,11 +109,7 @@ class Attack:
             self.attack_image.clip_composite_draw(0, src_bottom, src_w, slice_h_src,
                                                   0, flip, base_x, dest_y, dest_w, slice_h_dest)
 
-        # 플레이어 원래 스프라이트도 함께 그림
-        if self.zag.face_dir == 1:
-            self.zag.image.clip_composite_draw(0, 0, 32, 64, 0, '', self.zag.x, self.zag.y, self.zag.w, self.zag.h)
-        else:
-            self.zag.image.clip_composite_draw(0, 0, 32, 64, 0, 'h', self.zag.x, self.zag.y, self.zag.w, self.zag.h)
+        # 캐릭터 본체는 Zag.draw()에서 공통으로 처리
 
     def check_attack_collision(self):
         # 공격 이미지 크기는 폭 64, 높이 64로 가정
@@ -134,7 +137,8 @@ class Die:
     def __init__(self, zag):
         self.zag = zag
         self.death_timer = 2.0  # 2초 후 타이틀 화면으로 이동
-        self.defeat_image = load_image(os.path.join(r'C:\Users\heonilha\Documents\GitHub\2DGP-TermProject\resource\Image\GUI\defeat.png'))
+        defeat_path = os.path.join(BASE_DIR, 'resource', 'Image', 'GUI', 'defeat.png')
+        self.defeat_image = load_image(defeat_path)
     def enter(self,e):
         print("Zag is Dead")
         self.zag.invincibleTimer = 0.0
@@ -172,10 +176,7 @@ class Idle:
 
     #self.zag.image.clip_draw(int(self.zag.frame) * 32, 0, 32, 64, self.zag.x, self.zag.y)
     def draw(self):
-        if self.zag.face_dir == 1:
-            self.zag.image.clip_composite_draw(int(self.zag.frame) * 32, 0, 32, 64,0,'', self.zag.x, self.zag.y,self.zag.w,self.zag.h)
-        else:
-            self.zag.image.clip_composite_draw(int(self.zag.frame) * 32, 0, 32, 64,0,'h', self.zag.x, self.zag.y,self.zag.w,self.zag.h)
+        pass
 class Run:
     def __init__(self, zag):
         self.zag = zag
@@ -189,91 +190,149 @@ class Run:
 
     def do(self):
         self.zag.frame = (self.zag.frame + FRAMES_PER_ACTION * RUN_PER_TIME * game_framework.frame_time) % 2
-        self.zag.x += self.zag.xdir * RUN_SPEED_PPS * game_framework.frame_time
-        self.zag.y += self.zag.ydir * RUN_SPEED_PPS * game_framework.frame_time
 #composite_draw(self, left, bottom, width, height, angle, flip, x, y,w,h)
     def draw(self):
-        if self.zag.xdir == 0:
-            flip = '' if self.zag.face_dir == 1 else 'h'
-            self.zag.image.clip_composite_draw(int(self.zag.frame) * 32, 0, 32, 64, 0, flip, self.zag.x, self.zag.y,
-                                               self.zag.w, self.zag.h)
-        elif self.zag.xdir == 1:
-            self.zag.image.clip_composite_draw(int(self.zag.frame) * 32, 0, 32, 64, 0, '', self.zag.x, self.zag.y,
-                                               self.zag.w, self.zag.h)
-        else:
-            self.zag.image.clip_composite_draw(int(self.zag.frame) * 32, 0, 32, 64, 0, 'h', self.zag.x, self.zag.y,
-                                               self.zag.w, self.zag.h)
+        pass
 
-class Zag:
+class Zag(GameObject):
     def __init__(self):
-        self.x, self.y = 400, 300
-        self.image = load_image(os.path.join(r'C:\Users\heonilha\Documents\GitHub\2DGP-TermProject\resource\Image\Character\ZAG_ani.png'))
-        self.attack_image = load_image(os.path.join(r'C:\Users\heonilha\Documents\GitHub\2DGP-TermProject\resource\Image\Character\ZAG_attack.png'))
-        self.frame = 0
-        self.xdir = 0
-        self.ydir = 0
-        self.face_dir = 1
-        self.hp = 100
+        super().__init__()
+
+        self.transform = self.add_component(TransformComponent(400, 300, 48, 64))
+        image_path = os.path.join(BASE_DIR, 'resource', 'Image', 'Character', 'ZAG_ani.png')
+        self.sprite = self.add_component(SpriteComponent(load_image(image_path), 32, 64))
+        attack_path = os.path.join(BASE_DIR, 'resource', 'Image', 'Character', 'ZAG_attack.png')
+        self.attack_image = load_image(attack_path)
+        self.movement = self.add_component(MovementComponent(RUN_SPEED_PPS))
+        self.combat = self.add_component(CombatComponent(100))
+
         self.mp = 100
-        self.invincibleTimer = 0.0
         self.attack_cooldown = 1.0  # 공격 쿨타임 (예: 1.0초)
         self.attack_cooldown_timer = 0.0  # 쿨타임 계산용 타이머 (0이 되어야 공격 가능)
-        self.w = 48
-        self.h = 64
         self.hp_potions = 3
         self.mp_potions = 3
         self.gold = 0
-        self.type='player'
+        self.type = 'player'
 
         self.keys_down = set()
         self.key_map = {
-            SDLK_RIGHT:(1,0),
-            SDLK_LEFT:(-1,0),
-            SDLK_UP:(0,1),
-            SDLK_DOWN:(0,-1)
+            SDLK_RIGHT: (1, 0),
+            SDLK_LEFT: (-1, 0),
+            SDLK_UP: (0, 1),
+            SDLK_DOWN: (0, -1)
         }
         self.IDLE = Idle(self)
         self.RUN = Run(self)
         self.DIE = Die(self)
-        self.ATTACK = Attack(self,self.attack_image)
+        self.ATTACK = Attack(self, self.attack_image)
         self.state_machine = StateMachine(
             self.IDLE,
             state_transitions={
-                self.IDLE: {space_down: self.IDLE, event_run: self.RUN, event_die: self.DIE,event_attack: self.ATTACK},
+                self.IDLE: {space_down: self.IDLE, event_run: self.RUN, event_die: self.DIE, event_attack: self.ATTACK},
                 self.RUN: {space_down: self.RUN, event_stop: self.IDLE, event_die: self.DIE, event_attack: self.ATTACK},
                 self.ATTACK: {event_timeout: self.IDLE, event_run: self.RUN, event_die: self.DIE},
-                self.DIE: {}
+                self.DIE: {},
             }
         )
+
+    @property
+    def x(self):
+        return self.transform.x
+
+    @x.setter
+    def x(self, value):
+        self.transform.x = value
+
+    @property
+    def y(self):
+        return self.transform.y
+
+    @y.setter
+    def y(self, value):
+        self.transform.y = value
+
+    @property
+    def w(self):
+        return self.transform.w
+
+    @property
+    def h(self):
+        return self.transform.h
+
+    @property
+    def xdir(self):
+        return self.movement.xdir
+
+    @xdir.setter
+    def xdir(self, value):
+        self.movement.xdir = value
+
+    @property
+    def ydir(self):
+        return self.movement.ydir
+
+    @ydir.setter
+    def ydir(self, value):
+        self.movement.ydir = value
+
+    @property
+    def face_dir(self):
+        return self.movement.face_dir
+
+    @face_dir.setter
+    def face_dir(self, value):
+        self.movement.face_dir = value
+        self.sprite.flip = '' if value == 1 else 'h'
+
+    @property
+    def frame(self):
+        return self.sprite.frame
+
+    @frame.setter
+    def frame(self, value):
+        self.sprite.frame = value
+
+    @property
+    def hp(self):
+        return self.combat.hp
+
+    @hp.setter
+    def hp(self, value):
+        self.combat.hp = max(0, min(self.combat.max_hp, value))
+
+    @property
+    def invincibleTimer(self):
+        return self.combat.invincible_timer
+
+    @invincibleTimer.setter
+    def invincibleTimer(self, value):
+        self.combat.invincible_timer = max(0.0, value)
+
     def update(self):
         if self.hp <= 0 and self.state_machine.cur_state != self.DIE:
-            # 'DIE' 이벤트를 발생시켜 상태 머신이 DIE 상태로 변경하도록 함
             self.state_machine.handle_state_event(('DIE', None))
-            # 사망 상태로 진입했다면, 즉시 Die.do()가 실행되도록 하고
-            # 이번 프레임의 나머지 update(무적 타이머 감소 등)는 생략
             self.state_machine.update()
             return
 
         if self.attack_cooldown_timer > 0:
             self.attack_cooldown_timer -= game_framework.frame_time
 
-        if self.invincibleTimer>0:
-            self.invincibleTimer-= game_framework.frame_time
-            if self.invincibleTimer<0:
-                self.invincibleTimer=0.0
-                print("무적시간 종료")
         self.state_machine.update()
+        super().update()
 
     def draw(self):
         if getattr(self.state_machine, 'cur_state', None) == self.DIE:
             self.DIE.draw()
             return
 
+        should_draw_body = True
         if self.invincibleTimer > 0:
-            if int(self.invincibleTimer * 10) % 2 == 0:
-                self.state_machine.draw()
-        else:
-            self.state_machine.draw()
+            should_draw_body = int(self.invincibleTimer * 10) % 2 == 0
+
+        if should_draw_body:
+            super().draw()
+
+        self.state_machine.draw()
 
         if self.hp > 0:
             hp_bar_width = 50
@@ -281,11 +340,9 @@ class Zag:
             hp_bar_x = self.x - hp_bar_width // 2
             hp_bar_y = self.y + 40
 
-            # 배경 (회색) - 색상을 튜플이 아닌 정수 인자로 전달
             draw_rectangle(hp_bar_x, hp_bar_y, hp_bar_x + hp_bar_width, hp_bar_y + hp_bar_height, 100, 100, 100)
 
-            # 현재 HP (초록색)
-            current_hp_width = int(hp_bar_width * (self.hp / 100))
+            current_hp_width = int(hp_bar_width * (self.hp / self.combat.max_hp))
             draw_rectangle(hp_bar_x, hp_bar_y, hp_bar_x + current_hp_width, hp_bar_y + hp_bar_height, 255, 0, 0)
 
         if self.mp > 0:
@@ -294,41 +351,28 @@ class Zag:
             mp_bar_x = self.x - mp_bar_width // 2
             mp_bar_y = self.y + 50
 
-            # 배경 (회색) - 색상을 튜플이 아닌 정수 인자로 전달
             draw_rectangle(mp_bar_x, mp_bar_y, mp_bar_x + mp_bar_width, mp_bar_y + mp_bar_height, 100, 100, 100)
 
-            # 현재 MP (파란색)
             current_mp_width = int(mp_bar_width * (self.mp / 100))
             draw_rectangle(mp_bar_x, mp_bar_y, mp_bar_x + current_mp_width, mp_bar_y + mp_bar_height, 0, 0, 255)
 
     def handle_event(self, event):
-        #    죽었을 때
         if self.state_machine.cur_state == self.DIE:
             return
-        # 2. (이하 기존 'set' 방식 로직)
-        #    살아있고, 공격 중이 아닐 때의 처리
 
-        # 3. 이동 키인지 확인
         if event.key in self.key_map:
             if event.type == SDL_KEYDOWN:
                 self.keys_down.add(event.key)
             elif event.type == SDL_KEYUP:
                 self.keys_down.discard(event.key)
 
-        # 4. 이동 키가 아니라면 (공격, 스페이스바 등)
         else:
             if event_attack(('INPUT', event)):
-                # 쿨타임이 0 이하일 때만 (공격 가능할 때만) 이벤트를 처리
                 if self.attack_cooldown_timer <= 0:
                     self.state_machine.handle_state_event(('INPUT', event))
-                else:
-                    # 쿨타임 중이면 Z키를 눌러도 아무것도 안 함 (무시)
-                    pass
             else:
-                # 'Z' 키가 아닌 다른 키(스페이스바 등)는 그냥 처리
                 self.state_machine.handle_state_event(('INPUT', event))
 
-        # 5. set을 기반으로 xdir/ydir을 매번 새로 계산
         cur_xdir, cur_ydir = self.xdir, self.ydir
 
         self.xdir = 0
@@ -339,7 +383,6 @@ class Zag:
                 self.xdir += dx
                 self.ydir += dy
 
-        # 6. 방향이 변경되었는지 확인하고 상태 전이
         if cur_xdir != self.xdir or cur_ydir != self.ydir:
             if self.xdir != 0:
                 self.face_dir = self.xdir
@@ -352,16 +395,14 @@ class Zag:
         if event.type == SDL_KEYDOWN and event.key == SDLK_a:
             self.fire_ball()
 
-        #1을 누르면 hp포션 사용
         if event.type == SDL_KEYDOWN and event.key == SDLK_1:
             if self.hp_potions > 0:
-                self.hp = min(100, self.hp + 20)
+                self.hp = min(self.combat.max_hp, self.hp + 20)
                 self.hp_potions -= 1
                 print(f'Used HP Potion. Current HP: {self.hp}, Remaining HP Potions: {self.hp_potions}')
             else:
                 print("No HP potions left!")
 
-        #2를 누르면 mp포션 사용
         if event.type == SDL_KEYDOWN and event.key == SDLK_2:
             if self.mp_potions > 0:
                 self.mp = min(100, self.mp + 20)
@@ -371,20 +412,17 @@ class Zag:
                 print("No MP potions left!")
 
     def get_bb(self):
-        half_w = self.w // 2
-        half_h = self.h // 2
         return self.x - (self.w / 2) + 10, \
                self.y - (self.h / 2) + 10, \
                self.x + (self.w / 2) - 10, \
                self.y + (self.h / 2) - 10
+
     def handle_collision(self, other, group):
         if group == 'zag:slime':
             if self.invincibleTimer <= 0.0:
                 self.hp -= 10
                 print(f'Zag HP: {self.hp}')
                 self.invincibleTimer = 1.0
-            else:
-                pass
 
     def fire_ball(self):
         if self.mp >= 10:

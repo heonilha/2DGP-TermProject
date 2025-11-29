@@ -1,6 +1,6 @@
-from component_base import Component
-from component_transform import TransformComponent
-from component_sprite import SpriteComponent
+from components.component_base import Component
+from components.component_transform import TransformComponent
+from components.component_sprite import SpriteComponent
 import game_framework
 
 
