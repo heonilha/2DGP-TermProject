@@ -31,11 +31,11 @@ class AttackComponent(Component):
         return min(len(self.attack_images) - 1, int(self._attack_progress() * len(self.attack_images)))
 
     def _get_frame_size(self, attack_image):
-        source_w = getattr(attack_image, 'w', self.base_width)
-        source_h = getattr(attack_image, 'h', self.base_height)
-        dest_w = source_w * self.scale
-        dest_h = source_h * self.scale
-        return dest_w, dest_h
+        source_w = max(1, int(getattr(attack_image, 'w', self.base_width)))
+        source_h = max(1, int(getattr(attack_image, 'h', self.base_height)))
+        dest_w = max(1, int(source_w * self.scale))
+        dest_h = max(1, int(source_h * self.scale))
+        return source_w, source_h, dest_w, dest_h
 
     def start_attack(self, face_dir):
         self.attack_timer = self.attack_duration
@@ -70,7 +70,7 @@ class AttackComponent(Component):
 
         frame_index = self._get_frame_index()
         attack_image = self.attack_images[frame_index]
-        dest_w, dest_h = self._get_frame_size(attack_image)
+        source_w, source_h, dest_w, dest_h = self._get_frame_size(attack_image)
 
         flip = 'h' if self.attack_dir == 1 else ''
         base_x = tr.x + (self.offset_x if self.attack_dir == 1 else -self.offset_x)
@@ -78,8 +78,8 @@ class AttackComponent(Component):
         attack_image.clip_composite_draw(
             0,
             0,
-            dest_w,
-            dest_h,
+            source_w,
+            source_h,
             0,
             flip,
             base_x,
@@ -95,7 +95,7 @@ class AttackComponent(Component):
 
         frame_index = self._get_frame_index()
         attack_image = self.attack_images[frame_index]
-        dest_w, dest_h = self._get_frame_size(attack_image)
+        _, _, dest_w, dest_h = self._get_frame_size(attack_image)
 
         attack_box_x = tr.x + (self.offset_x if self.attack_dir == 1 else -self.offset_x)
         attack_box_y = tr.y + self.offset_y
