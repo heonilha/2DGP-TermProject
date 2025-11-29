@@ -245,7 +245,7 @@ class Slime(GameObject):
         if self.attack_state == 'none':
             self.attack_cooltime_timer += dt
 
-        if not self.hopping and not self.preparing and not self.movement.is_path_active():
+        if not self.hopping and not self.movement.is_path_active():
             self.jump_timer += dt
 
         if (not self.hopping) and (not self.preparing) and (self.jump_timer >= max(0.0, HOP_INTERVAL - PREPARE_TIME)):
