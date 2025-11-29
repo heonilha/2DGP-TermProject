@@ -1,5 +1,6 @@
 from components.component_base import Component
 from components.component_transform import TransformComponent
+
 class SpriteComponent(Component):
     def __init__(self, image, frame_w, frame_h):
         super().__init__()
@@ -8,10 +9,11 @@ class SpriteComponent(Component):
         self.frame_h = frame_h
         self.frame = 0
         self.flip = ''  # '' or 'h'
+        self.visible = True
 
     def draw(self):
         tr = self.owner.get(TransformComponent)
-        if not tr:
+        if not tr or not self.image or not self.visible:
             return
 
         self.image.clip_composite_draw(
