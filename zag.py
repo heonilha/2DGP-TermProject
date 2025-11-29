@@ -75,7 +75,6 @@ class Attack:
     def draw(self):
         pass
 
-
 class Die:
     def __init__(self, zag):
         self.zag = zag
@@ -101,8 +100,6 @@ class Die:
         if self.death_timer > 0.5:  # 0.5초 정도 남을 때까지 DEFEAT 표시
             self.defeat_image.draw(get_canvas_width() // 2, get_canvas_height() // 2)
 
-
-
 class Idle:
     def __init__(self, zag):
         self.zag = zag
@@ -117,9 +114,9 @@ class Idle:
     def do(self):
         self.zag.frame = (self.zag.frame + FRAMES_PER_ACTION * IDLE_PER_TIME * game_framework.frame_time) % 2
 
-    #self.zag.image.clip_draw(int(self.zag.frame) * 32, 0, 32, 64, self.zag.x, self.zag.y)
     def draw(self):
         pass
+
 class Run:
     def __init__(self, zag):
         self.zag = zag
