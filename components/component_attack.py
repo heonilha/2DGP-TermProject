@@ -8,7 +8,10 @@ from components.component_transform import TransformComponent
 class AttackComponent(Component):
     def __init__(self, attack_image, duration=0.2, damage=5, width=64, height=64, offset_x=32, offset_y=0):
         super().__init__()
-        self.attack_image = attack_image
+        if isinstance(attack_image, (list, tuple)):
+            self.attack_images = list(attack_image)
+        else:
+            self.attack_images = [attack_image]
         self.attack_duration = duration
         self.attack_timer = 0.0
         self.damage = damage
@@ -44,41 +47,34 @@ class AttackComponent(Component):
             self.active = False
 
     def draw(self):
-        if not self.is_attacking() or not self.attack_image:
+        if not self.is_attacking() or not self.attack_images:
             return
 
         tr = self.owner.get(TransformComponent)
         if not tr:
             return
 
-        src_w, src_h = 114, 217
-        dest_w, dest_h = 32, 64
-        slices = 6
-        slice_h_src = src_h // slices
-        slice_h_dest = dest_h / slices
-
         progress = max(0.0, min(1.0, (self.attack_duration - self.attack_timer) / self.attack_duration))
-        slices_to_draw = int(progress * slices)
+        frame_index = min(len(self.attack_images) - 1, int(progress * len(self.attack_images)))
+        attack_image = self.attack_images[frame_index]
 
         flip = 'h' if self.attack_dir == 1 else ''
         base_x = tr.x + (self.offset_x if self.attack_dir == 1 else -self.offset_x)
-        base_top_y = tr.y + dest_h / 2 - slice_h_dest / 2
+        dest_w = getattr(attack_image, 'w', self.width)
+        dest_h = getattr(attack_image, 'h', self.height)
 
-        for i in range(slices_to_draw):
-            src_bottom = src_h - (i + 1) * slice_h_src
-            dest_y = base_top_y - i * slice_h_dest
-            self.attack_image.clip_composite_draw(
-                0,
-                src_bottom,
-                src_w,
-                slice_h_src,
-                0,
-                flip,
-                base_x,
-                dest_y,
-                dest_w,
-                slice_h_dest,
-            )
+        attack_image.clip_composite_draw(
+            0,
+            0,
+            dest_w,
+            dest_h,
+            0,
+            flip,
+            base_x,
+            tr.y,
+            dest_w,
+            dest_h,
+        )
 
     def check_attack_collision(self):
         tr = self.owner.get(TransformComponent)
