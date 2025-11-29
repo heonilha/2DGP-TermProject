@@ -144,11 +144,13 @@ class Zag(GameObject):
         self.transform = self.add_component(TransformComponent(400, 300, 48, 64))
         image_path = os.path.join(BASE_DIR, 'resource', 'Image', 'Character', 'ZAG_ani.png')
         self.sprite = self.add_component(SpriteComponent(load_image(image_path), 32, 64))
-        attack_path = os.path.join(BASE_DIR, 'resource', 'Image', 'Character', 'ZAG_attack.png')
-        self.attack_image = load_image(attack_path)
+        attack_dir = os.path.join(BASE_DIR, 'resource', 'Image', 'Character', 'Attack')
+        self.attack_images = [
+            load_image(os.path.join(attack_dir, f'Attack{i}.png')) for i in range(1, 8)
+        ]
         self.movement = self.add_component(MovementComponent(RUN_SPEED_PPS))
         self.combat = self.add_component(CombatComponent(100))
-        self.attack_component = self.add_component(AttackComponent(self.attack_image))
+        self.attack_component = self.add_component(AttackComponent(self.attack_images, duration=0.7))
         self.skill_component = self.add_component(SkillComponent(mp_cost=10))
         self.input_component = self.add_component(
             InputComponent(
