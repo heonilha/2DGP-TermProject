@@ -5,7 +5,7 @@ from modes import play_mode
 from stage_icon import StageIcon
 import os
 
-BASE_DIR=os.path.dirname(__file__)
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 # 3. 이 모드에서 사용할 객체 리스트
 stage_icons = []
