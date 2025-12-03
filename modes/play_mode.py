@@ -1,13 +1,12 @@
-import random
 from pico2d import *
 
 import game_framework
 import game_world
 import os
-import select_mode
+from modes import select_mode
 
 from zag import Zag
-from slime import Slime
+from monsters.slime import Slime
 from background import Background
 from ui import GameUI
 

@@ -1,8 +1,7 @@
 from pico2d import *
 import game_framework
-import game_world  # game_world에 등록해서 관리해도 됩니다.
 
-import play_mode
+from modes import play_mode
 from stage_icon import StageIcon
 import os
 

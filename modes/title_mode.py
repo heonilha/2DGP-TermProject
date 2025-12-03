@@ -1,6 +1,6 @@
 from pico2d import *
 import game_framework
-import select_mode
+from modes import select_mode
 image = None
 
 def init():

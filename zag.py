@@ -1,5 +1,5 @@
 from pico2d import *
-from sdl2 import SDL_KEYDOWN, SDLK_z, SDLK_SPACE, SDLK_RIGHT, SDL_KEYUP, SDLK_LEFT, SDLK_UP, SDLK_DOWN, SDLK_a, SDLK_1, SDLK_2
+from sdl2 import SDL_KEYDOWN, SDLK_z, SDLK_SPACE, SDLK_RIGHT, SDLK_LEFT, SDLK_UP, SDLK_DOWN
 
 import os
 import game_framework
@@ -92,7 +92,7 @@ class Die:
         pass
 
     def do(self):
-        import title_mode
+        from modes import title_mode
         if self.death_timer <= 0:
             game_world.clear()
             game_framework.change_mode(title_mode)
