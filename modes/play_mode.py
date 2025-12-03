@@ -15,7 +15,8 @@ ui=None
 slimes = []
 game_running=True
 
-BASE_DIR=os.path.dirname(__file__)
+# 프로젝트의 루트 디렉토리를 기준으로 리소스 경로를 찾도록 설정
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 victory_image=None
 victory_background=None
 

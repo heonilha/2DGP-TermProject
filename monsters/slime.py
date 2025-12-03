@@ -48,7 +48,7 @@ class Slime(GameObject):
     def __init__(self):
         super().__init__()
 
-        base_dir = os.path.dirname(__file__)
+        base_dir = os.path.dirname(os.path.dirname(__file__))
         image_path = os.path.join(base_dir, 'resource', 'Image', 'Monster', 'Blue_Slime.png')
         if not os.path.exists(image_path):
             raise FileNotFoundError(f"Image not found: `{image_path}`")
