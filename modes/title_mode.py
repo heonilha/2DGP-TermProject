@@ -1,11 +1,12 @@
 from pico2d import *
+import os
 import game_framework
 from modes import select_mode
 image = None
 
 def init():
     global image
-    base_dir = os.path.dirname(__file__)
+    base_dir = os.path.dirname(os.path.dirname(__file__))
     image_path = os.path.join(base_dir, 'resource', 'Image', 'GUI', 'UI_TITLE_TITLE.jpg')
     if not os.path.exists(image_path):
         raise FileNotFoundError(f"Image not found: `{image_path}`")
