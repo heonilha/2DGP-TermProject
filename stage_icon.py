@@ -4,11 +4,12 @@ import game_framework
 
 
 class StageIcon:
-    def __init__(self, x, y, image_path, target_mode):
+    def __init__(self, x, y, image_path, target_mode, stage_id=None):
         self.x, self.y = x, y
         self.image = load_image(image_path)
         self.w, self.h = self.image.w, self.image.h
         self.target_mode = target_mode  # ◀ 클릭 시 이동할 '모드'
+        self.stage_id = stage_id
 
     def get_bb(self):
         # 마우스 충돌을 위한 사각형 범위
@@ -22,7 +23,9 @@ class StageIcon:
             # 3. get_bb()로 충돌 확인
             left, bottom, right, top = self.get_bb()
             if left <= event.x <= right and bottom <= mouse_y <= top:
-                # 4. 클릭 성공! 게임 모드 변경
+                # 4. 클릭 성공! 선택된 스테이지 준비 후 게임 모드 변경
+                if self.stage_id is not None and hasattr(self.target_mode, "prepare_stage"):
+                    self.target_mode.prepare_stage(self.stage_id)
                 game_framework.change_mode(self.target_mode)
 
     def update(self):
