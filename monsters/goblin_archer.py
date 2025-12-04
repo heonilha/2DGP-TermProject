@@ -262,8 +262,14 @@ class GoblinArcher(GameObject):
             self.frame = 0
 
     def _fire_arrow(self):
-        direction = (self.dir, 0)
-        arrow = Arrow(self.x + self.dir * (self.transform.w * 0.4), self.y, direction)
+        target = self.perception.target
+        if target:
+            dx = target.x - self.x
+            dy = target.y - self.y
+        else:
+            dx, dy = self.dir, 0
+
+        arrow = Arrow(self.x + self.dir * (self.transform.w * 0.4), self.y, (dx, dy))
         game_world.add_object(arrow, 1)
 
     def _update_cooldown(self):
