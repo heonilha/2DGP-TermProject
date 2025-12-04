@@ -262,11 +262,7 @@ class GoblinArcher(GameObject):
             self.frame = 0
 
     def _fire_arrow(self):
-        target = self.perception.target
-        if not target:
-            return
-
-        direction = (target.x - self.x, target.y - self.y)
+        direction = (self.dir, 0)
         arrow = Arrow(self.x + self.dir * (self.transform.w * 0.4), self.y, direction)
         game_world.add_object(arrow, 1)
 

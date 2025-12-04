@@ -25,7 +25,7 @@ MOVE_ANIM_SPEED = 0.12
 PREPARE_TIME = 1.0
 ATTACK_ANIM_DURATION = 0.45
 ATTACK_DASH_DURATION = 0.25
-ATTACK_DISTANCE = 80
+BASE_ATTACK_DISTANCE = 80
 ATTACK_COOLDOWN = 2.0
 ATTACK_DAMAGE = 15
 
@@ -186,8 +186,12 @@ class Goblin(GameObject):
         self.cooldown_timer = 0.0
         self.dash_done = False
 
+        target = self.perception.target
+        target_dx = abs(target.x - self.x) if target else BASE_ATTACK_DISTANCE
+        attack_distance = max(BASE_ATTACK_DISTANCE, min(DETECTION_RANGE, target_dx))
+
         start_pos = (self.x, self.y)
-        end_pos = (self.x + self.dir * ATTACK_DISTANCE, self.y)
+        end_pos = (self.x + self.dir * attack_distance, self.y)
 
         self.collision.offset_x = self.dir * (HITBOX_EXTRA * 0.5)
         self.collision.override_width = self.transform.w + HITBOX_EXTRA
