@@ -177,8 +177,7 @@ class GoblinArcher(GameObject):
 
     def _update_sprite_flip(self):
         if self.sprite:
-            # Archer art faces left by default; flip when moving right.
-            self.sprite.flip = "h" if self.dir > 0 else ""
+            self.sprite.flip = "h" if self.dir >= 0 else ""
 
     def update(self, target=None):
         if self.hp <= 0:

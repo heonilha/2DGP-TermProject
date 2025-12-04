@@ -116,8 +116,7 @@ class Goblin(GameObject):
 
     def _update_sprite_flip(self):
         if self.sprite:
-            # Goblin art faces left by default; flip when moving right.
-            self.sprite.flip = "h" if self.dir > 0 else ""
+            self.sprite.flip = "" if self.dir >= 0 else "h"
 
     def update(self, target=None):
         if self.hp <= 0:
