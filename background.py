@@ -4,14 +4,14 @@ from pico2d import *
 
 
 class Background:
-    image = None
+    _cache = {}
 
-    def __init__(self):
-        if Background.image is None:
-            Background.image = load_image(
-                os.path.join(r'C:\\Users\\heonilha\\Documents\\GitHub\\2DGP-TermProject\\resource\\Image\\GUI\\Stage\\BackGround\\bg1.png')
-            )
-        self.image = Background.image
+    def __init__(self, filename="bg1.png"):
+        base_dir = os.path.dirname(__file__)
+        image_path = os.path.join(base_dir, 'resource', 'Image', 'GUI', 'Stage', 'BackGround', filename)
+        if filename not in Background._cache:
+            Background._cache[filename] = load_image(image_path)
+        self.image = Background._cache[filename]
 
     def draw(self):
         self.image.draw(get_canvas_width()//2, get_canvas_height()//2, get_canvas_width(), get_canvas_height())
