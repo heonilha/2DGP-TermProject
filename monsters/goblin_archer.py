@@ -79,7 +79,8 @@ class Arrow(GameObject):
         self.movement.ydir = dy / length
 
         if self.sprite:
-            self.sprite.flip = "" if self.movement.xdir >= 0 else "h"
+            # Arrow art faces left by default, so flip when traveling right.
+            self.sprite.flip = "h" if self.movement.xdir >= 0 else ""
 
     def handle_collision(self, other):
         if getattr(other, "collision_group", None) == CollisionGroup.PLAYER:
