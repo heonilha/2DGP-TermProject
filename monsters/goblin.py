@@ -1,3 +1,4 @@
+import math
 import os
 import random
 
@@ -116,7 +117,7 @@ class Goblin(GameObject):
 
     def _update_sprite_flip(self):
         if self.sprite:
-            self.sprite.flip = "" if self.dir >= 0 else "h"
+            self.sprite.flip = "h" if self.dir < 0 else ""
 
     def update(self, target=None):
         if self.hp <= 0:
@@ -188,12 +189,28 @@ class Goblin(GameObject):
         self.dash_done = False
 
         target = self.perception.target
-        target_dx = abs(target.x - self.x) if target else BASE_ATTACK_DISTANCE
-        scaled_reach = target_dx * ATTACK_RANGE_SCALE
-        attack_distance = max(BASE_ATTACK_DISTANCE, min(DETECTION_RANGE, scaled_reach))
+        if target:
+            dx = target.x - self.x
+            dy = target.y - self.y
+            distance = math.hypot(dx, dy)
+            attack_distance = max(
+                BASE_ATTACK_DISTANCE,
+                min(DETECTION_RANGE, distance * ATTACK_RANGE_SCALE),
+            )
+            if dx == 0 and dy == 0:
+                dir_x, dir_y = self.dir, 0
+            else:
+                dir_x, dir_y = dx / distance, dy / distance
+            self.dir = -1 if dir_x < 0 else 1
+        else:
+            attack_distance = BASE_ATTACK_DISTANCE
+            dir_x, dir_y = self.dir, 0
 
         start_pos = (self.x, self.y)
-        end_pos = (self.x + self.dir * attack_distance, self.y)
+        end_pos = (
+            self.x + dir_x * attack_distance,
+            self.y + dir_y * attack_distance,
+        )
 
         self.collision.offset_x = self.dir * (HITBOX_EXTRA * 0.5)
         self.collision.override_width = self.transform.w + HITBOX_EXTRA
