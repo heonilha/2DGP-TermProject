@@ -26,11 +26,12 @@ def init():
 
     # 스테이지 아이콘 객체 생성
     stage_icons = [
-        StageIcon(200, 300, icon1_path, play_mode),
-        StageIcon(400, 300, icon2_path, play_mode),
-        StageIcon(600, 300, icon3_path, play_mode),
-        StageIcon(800, 300, icon4_path, play_mode),
-        StageIcon(1000, 300, icon5_path, play_mode)
+        StageIcon(200, 300, icon1_path, play_mode, stage_id=1),
+        StageIcon(400, 300, icon2_path, play_mode, stage_id=2),
+        # 추가 아이콘은 이후 스테이지 정의가 준비되면 연결
+        StageIcon(600, 300, icon3_path, play_mode, stage_id=None),
+        StageIcon(800, 300, icon4_path, play_mode, stage_id=None),
+        StageIcon(1000, 300, icon5_path, play_mode, stage_id=None)
     ]
 
 
