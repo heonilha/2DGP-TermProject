@@ -14,7 +14,7 @@ class Background:
         self.image = Background.image
 
     def draw(self):
-        self.image.draw(600, 350, 1200, 700)
+        self.image.draw(get_canvas_width()//2, get_canvas_height()//2, get_canvas_width(), get_canvas_height())
 
     def update(self):
         pass

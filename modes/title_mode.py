@@ -25,7 +25,7 @@ def handle_events():
             game_framework.change_mode(select_mode)
 def draw():
     clear_canvas()
-    image.draw(600,350, 1200,700)
+    image.draw(get_canvas_width()//2, get_canvas_height()//2, get_canvas_width(), get_canvas_height())
     update_canvas()
 def update():
     pass
