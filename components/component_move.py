@@ -79,10 +79,6 @@ class MovementComponent(Component):
                 return
 
             dt = game_framework.frame_time
-            if self.xdir != 0:
-                self.face_dir = self.xdir
-                if sprite:
-                    sprite.flip = '' if self.face_dir == 1 else 'h'
 
             tr.x += self.xdir * self.speed * dt
             tr.y += self.ydir * self.speed * dt

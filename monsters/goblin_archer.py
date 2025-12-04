@@ -80,7 +80,7 @@ class Arrow(GameObject):
 
         if self.sprite:
             # Arrow art faces left by default, so flip when traveling right.
-            self.sprite.flip = "h" if self.movement.xdir >= 0 else ""
+            self.sprite.flip = "" if self.movement.xdir >= 0 else "h"
 
     def handle_collision(self, other):
         if getattr(other, "collision_group", None) == CollisionGroup.PLAYER:
@@ -177,7 +177,7 @@ class GoblinArcher(GameObject):
 
     def _update_sprite_flip(self):
         if self.sprite:
-            self.sprite.flip = "h" if self.dir < 0 else ""
+            self.sprite.flip = "" if self.dir < 0 else "h"
 
     def update(self, target=None):
         if self.hp <= 0:
