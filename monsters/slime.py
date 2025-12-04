@@ -287,11 +287,6 @@ class Slime(GameObject):
     def draw(self):
         super().draw()
 
-    def get_distance_to_zag_sq(self, zag):
-        dx = self.x - zag.x
-        dy = self.y - zag.y
-        return dx * dx + dy * dy
-
     def handle_collision(self, other):
         if getattr(other, "collision_group", None) == CollisionGroup.PROJECTILE:
             projectile_comp = other.get(ProjectileComponent)
