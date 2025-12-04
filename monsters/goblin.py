@@ -77,6 +77,7 @@ class Goblin(GameObject):
         self.state = "patrol"
         self.prepare_timer = 0.0
         self.attack_anim_timer = 0.0
+        self.dash_done = False
         self.attack_hit_registered = False
         self.cooldown_timer = ATTACK_COOLDOWN
 
@@ -114,7 +115,7 @@ class Goblin(GameObject):
 
     def _update_sprite_flip(self):
         if self.sprite:
-            self.sprite.flip = "" if self.dir >= 0 else "h"
+            self.sprite.flip = "h" if self.dir >= 0 else ""
 
     def update(self, target=None):
         if self.hp <= 0:
@@ -170,6 +171,8 @@ class Goblin(GameObject):
         self.movement.xdir = 0
         self.frame = 3
 
+        self.dash_done = False
+
     def _update_prepare(self):
         dt = game_framework.frame_time
         self.prepare_timer += dt
@@ -181,6 +184,7 @@ class Goblin(GameObject):
         self.attack_anim_timer = 0.0
         self.attack_hit_registered = False
         self.cooldown_timer = 0.0
+        self.dash_done = False
 
         start_pos = (self.x, self.y)
         end_pos = (self.x + self.dir * ATTACK_DISTANCE, self.y)
@@ -189,8 +193,11 @@ class Goblin(GameObject):
         self.collision.override_width = self.transform.w + HITBOX_EXTRA
 
         self.movement.start_linear(
-            start_pos, end_pos, ATTACK_DASH_DURATION, on_complete=self._finish_attack
+            start_pos, end_pos, ATTACK_DASH_DURATION, on_complete=self._on_dash_complete
         )
+
+    def _on_dash_complete(self):
+        self.dash_done = True
 
     def _update_attack(self):
         dt = game_framework.frame_time
@@ -200,7 +207,7 @@ class Goblin(GameObject):
         frame_index = 4 + int(progress * 3)
         self.frame = min(frame_index, 6)
 
-        if self.movement.type != MovementType.LINEAR and progress >= 1.0:
+        if self.dash_done and self.attack_anim_timer >= ATTACK_ANIM_DURATION:
             self._finish_attack()
 
     def _finish_attack(self):

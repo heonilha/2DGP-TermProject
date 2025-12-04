@@ -13,7 +13,6 @@ STAGES = {
         "id": 2,
         "background": "bg2.png",
         "monsters": [
-            {"type": "Slime", "count": 2},
             {"type": "Goblin", "count": 3},
             {"type": "GoblinArcher", "count": 2},
         ],

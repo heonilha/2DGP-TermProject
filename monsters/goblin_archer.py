@@ -13,7 +13,6 @@ from components.component_hud import HUDComponent
 from components.component_move import MovementComponent
 from components.component_perception import PerceptionComponent
 from components.component_projectile import ProjectileComponent
-from components.component_render import RenderComponent
 from components.component_sprite import SpriteComponent
 from components.component_transform import TransformComponent
 from game_object import GameObject
@@ -33,7 +32,7 @@ ATTACK_DAMAGE = 10
 DETECTION_RANGE = 320
 PATROL_RADIUS = 160
 ARROW_SPEED = 280
-ARROW_SIZE = (24, 8)
+ARROW_SIZE = (40, 10)
 
 
 class Arrow(GameObject):
@@ -63,7 +62,9 @@ class Arrow(GameObject):
             )
         )
         self.projectile = self.add_component(ProjectileComponent(ATTACK_DAMAGE))
-        self.render = self.add_component(RenderComponent(Arrow._arrow_image, width, height))
+        self.sprite = self.add_component(
+            SpriteComponent(Arrow._arrow_image, Arrow._arrow_image.w, Arrow._arrow_image.h)
+        )
 
         self.set_direction(direction)
 
@@ -76,6 +77,9 @@ class Arrow(GameObject):
             return
         self.movement.xdir = dx / length
         self.movement.ydir = dy / length
+
+        if self.sprite:
+            self.sprite.flip = "" if self.movement.xdir >= 0 else "h"
 
     def handle_collision(self, other):
         if getattr(other, "collision_group", None) == CollisionGroup.PLAYER:
@@ -172,7 +176,7 @@ class GoblinArcher(GameObject):
 
     def _update_sprite_flip(self):
         if self.sprite:
-            self.sprite.flip = "" if self.dir >= 0 else "h"
+            self.sprite.flip = "h" if self.dir >= 0 else ""
 
     def update(self, target=None):
         if self.hp <= 0:
