@@ -1,13 +1,12 @@
-import random
 from pico2d import *
 
 import game_framework
 import game_world
 import os
-import select_mode
+from modes import select_mode
 
 from zag import Zag
-from slime import Slime
+from monsters.slime import Slime
 from background import Background
 from ui import GameUI
 
@@ -16,7 +15,8 @@ ui=None
 slimes = []
 game_running=True
 
-BASE_DIR=os.path.dirname(__file__)
+# 프로젝트의 루트 디렉토리를 기준으로 리소스 경로를 찾도록 설정
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 victory_image=None
 victory_background=None
 
@@ -40,14 +40,11 @@ def init():
     global zag
     zag = Zag()
     game_world.add_object(zag, 1)
-    game_world.add_collision_pair(game_world.monsters,game_world.player,'zag:slime')
-    game_world.add_collision_pair(game_world.projectiles, game_world.monsters, 'ball:monster')
     global slimes
     for i in range(5):
         slime = Slime()
         slimes.append(slime)
         game_world.add_object(slime, 1)
-        game_world.add_collision_pair(game_world.player,game_world.monsters,'zag:slime')
     global background
     background=Background()
     game_world.add_object(background, 0)

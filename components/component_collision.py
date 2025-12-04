@@ -3,8 +3,10 @@ from components.component_transform import TransformComponent
 
 
 class CollisionComponent(Component):
-    def __init__(self, offset_x=0, offset_y=0, width=None, height=None):
+    def __init__(self, group, mask, offset_x=0, offset_y=0, width=None, height=None):
         super().__init__()
+        self.group = group
+        self.mask = mask
         self.offset_x = offset_x
         self.offset_y = offset_y
         self.override_width = width

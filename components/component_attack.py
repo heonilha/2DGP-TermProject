@@ -2,6 +2,7 @@ import game_framework
 import game_world
 
 from components.component_base import Component
+from components.component_combat import CombatComponent
 from components.component_transform import TransformComponent
 
 
@@ -119,6 +120,10 @@ class AttackComponent(Component):
                     and attack_bb[1] < target_bb[3]
                     and attack_bb[3] > target_bb[1]
                 ):
-                    if hasattr(target, 'take_damage'):
+                    combat = target.get(CombatComponent) if hasattr(target, 'get') else None
+                    if combat:
+                        combat.take_damage(self.damage)
+                    elif hasattr(target, 'take_damage'):
                         target.take_damage(self.damage)
+
                     self.hit_monsters.append(target)

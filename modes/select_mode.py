@@ -1,12 +1,11 @@
 from pico2d import *
 import game_framework
-import game_world  # game_world에 등록해서 관리해도 됩니다.
 
-import play_mode
+from modes import play_mode
 from stage_icon import StageIcon
 import os
 
-BASE_DIR=os.path.dirname(__file__)
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 # 3. 이 모드에서 사용할 객체 리스트
 stage_icons = []

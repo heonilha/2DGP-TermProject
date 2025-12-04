@@ -1,11 +1,12 @@
 from pico2d import *
-from sdl2 import SDL_KEYDOWN, SDLK_z, SDLK_SPACE, SDLK_RIGHT, SDL_KEYUP, SDLK_LEFT, SDLK_UP, SDLK_DOWN, SDLK_a, SDLK_1, SDLK_2
+from sdl2 import SDL_KEYDOWN, SDLK_z, SDLK_SPACE, SDLK_RIGHT, SDLK_LEFT, SDLK_UP, SDLK_DOWN
 
 import os
 import game_framework
 import game_world
 from state_machine import StateMachine
 from game_object import GameObject
+from collision_manager import CollisionGroup
 from components.component_transform import TransformComponent
 from components.component_sprite import SpriteComponent
 from components.component_move import MovementComponent
@@ -14,6 +15,7 @@ from components.component_attack import AttackComponent
 from components.component_skill import SkillComponent
 from components.component_input import InputComponent
 from components.component_hud import HUDComponent
+from components.component_collision import CollisionComponent
 
 
 def space_down(e):  # e is space down ?
@@ -90,7 +92,7 @@ class Die:
         pass
 
     def do(self):
-        import title_mode
+        from modes import title_mode
         if self.death_timer <= 0:
             game_world.clear()
             game_framework.change_mode(title_mode)
@@ -146,7 +148,7 @@ class Zag(GameObject):
             load_image(os.path.join(attack_dir, f'Attack{i}.png')) for i in range(1, 8)
         ]
         self.movement = self.add_component(MovementComponent(RUN_SPEED_PPS))
-        self.combat = self.add_component(CombatComponent(100))
+        self.combat = self.add_component(CombatComponent(100, invincible_duration=1.0, enable_invincibility=True))
         self.attack_component = self.add_component(AttackComponent(self.attack_images, duration=0.45, scale=0.7))
         self.skill_component = self.add_component(SkillComponent(mp_cost=10))
         self.input_component = self.add_component(
@@ -160,6 +162,15 @@ class Zag(GameObject):
             )
         )
         self.hud_component = self.add_component(HUDComponent())
+        self.collision_group = CollisionGroup.PLAYER
+        self.collision = self.add_component(
+            CollisionComponent(
+                group=CollisionGroup.PLAYER,
+                mask=CollisionGroup.MONSTER,
+                width=self.transform.w - 20,
+                height=self.transform.h - 20,
+            )
+        )
 
         self.mp = 100
         self.attack_cooldown = 1.0
@@ -167,7 +178,6 @@ class Zag(GameObject):
         self.hp_potions = 3
         self.mp_potions = 3
         self.gold = 0
-        self.type = 'player'
 
         self.IDLE = Idle(self)
         self.RUN = Run(self)
@@ -298,16 +308,10 @@ class Zag(GameObject):
         if self.input_component:
             self.input_component.handle_event(event)
 
-    def get_bb(self):
-        return self.x - (self.w / 2) + 10, \
-               self.y - (self.h / 2) + 10, \
-               self.x + (self.w / 2) - 10, \
-               self.y + (self.h / 2) - 10
-
-    def handle_collision(self, other, group):
-        if group == 'zag:slime':
-            if self.invincibleTimer <= 0.0:
-                self.hp -= 10
+    def handle_collision(self, other):
+        if getattr(other, "collision_group", None) == CollisionGroup.MONSTER:
+            prev_hp = self.hp
+            self.combat.take_damage(10)
+            if self.hp < prev_hp:
                 print(f'Zag HP: {self.hp}')
-                self.invincibleTimer = 1.0
 
