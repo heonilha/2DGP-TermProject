@@ -6,14 +6,19 @@ import os
 from modes import select_mode
 
 from zag import Zag
+from monsters.goblin import Goblin
+from monsters.goblin_archer import GoblinArcher
 from monsters.slime import Slime
 from background import Background
+from stage_definitions import STAGES
 from ui import GameUI
 
 zag = None
 ui=None
-slimes = []
+monsters = []
 game_running=True
+current_stage_data = None
+victory_timer = 2.0
 
 # 프로젝트의 루트 디렉토리를 기준으로 리소스 경로를 찾도록 설정
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
@@ -30,30 +35,60 @@ def handle_events():
         else:
             zag.handle_event(event)
 
+def prepare_stage(stage_id):
+    global current_stage_data
+    current_stage_data = STAGES[stage_id]
+
+
 def init():
-    global victory_image,victory_background
+    global victory_image, victory_background, victory_timer
+    if current_stage_data is None:
+        prepare_stage(1)
     image_path = os.path.join(BASE_DIR, 'resource', 'Image', 'GUI', 'clear.png')
     victory_image = load_image(image_path)
     victory_background_path = os.path.join(BASE_DIR, 'resource', 'Image', 'GUI','clearEmptyImage.png')
     victory_background = load_image(victory_background_path)
+    victory_timer = 2.0
 
     global zag
     zag = Zag()
     game_world.add_object(zag, 1)
-    global slimes
-    for i in range(5):
-        slime = Slime()
-        slimes.append(slime)
-        game_world.add_object(slime, 1)
+    _spawn_stage_monsters()
+
     global background
-    background=Background()
+    background = Background(current_stage_data["background"])
     game_world.add_object(background, 0)
     global game_running
     game_running=True
-    victory_timer=2.0
 
     global ui
     ui=GameUI()
+
+def _spawn_stage_monsters():
+    global monsters
+    monsters = []
+    for mob_info in current_stage_data["monsters"]:
+        mob_class = get_monster_class(mob_info["type"])
+        for _ in range(mob_info["count"]):
+            monster = mob_class()
+            monsters.append(monster)
+            game_world.add_object(monster, 1)
+
+
+def get_monster_class(monster_type: str):
+    monster_class = MONSTER_TYPES.get(monster_type)
+    if monster_class is None:
+        raise ValueError(f"Unknown monster type: {monster_type}")
+    return monster_class
+
+
+MONSTER_TYPES = {
+    "Slime": Slime,
+    "Goblin": Goblin,
+    "GoblinArcher": GoblinArcher,
+}
+
+MONSTER_CLASS_TUPLE = tuple(set(MONSTER_TYPES.values()))
 
 def update():
     global game_running, victory_timer
@@ -69,27 +104,21 @@ def update():
     for layer in game_world.world:
         for o in layer[:]:  # 2. (안전성을 위해) 리스트의 복사본 순회
 
-            # 3. 객체가 Slime 클래스의 인스턴스인지 확인
-            if isinstance(o, Slime):
-                # 4. 슬라임이면 "감독"이 알고 있는 zag(플레이어)를 넘겨줌
+            if isinstance(o, MONSTER_CLASS_TUPLE):
                 o.update(zag)
             else:
-                # 5. 플레이어, 배경 등 나머지는 그냥 원래대로 update() 호출
                 o.update()
     game_world.handle_collisions()
 
     monster_exists = False
     for layer in game_world.world:
         for obj in layer:
-            # 2. 객체가 Slime 클래스의 인스턴스(객체)인지 확인
-            if isinstance(obj, Slime):
-                # 3. 슬라임이 한 마리라도 발견되면, 아직 승리 아님
+            if isinstance(obj, MONSTER_CLASS_TUPLE):
                 monster_exists = True
-                break  # 몬스터를 찾았으니 더 이상 검색할 필요 없음
+                break
         if monster_exists:
-            break  # 몬스터를 찾았으니 더 이상 검색할 필요 없음
+            break
 
-    # 4. 몬스터를 한 마리도 못 찾았다면(monster_exists가 False) 승리!
     if not monster_exists:
         game_running = False
         victory_timer=2.0
