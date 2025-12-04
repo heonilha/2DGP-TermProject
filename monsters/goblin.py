@@ -26,6 +26,7 @@ PREPARE_TIME = 1.0
 ATTACK_ANIM_DURATION = 0.45
 ATTACK_DASH_DURATION = 0.25
 BASE_ATTACK_DISTANCE = 80
+ATTACK_RANGE_SCALE = 0.85
 ATTACK_COOLDOWN = 2.0
 ATTACK_DAMAGE = 15
 
@@ -115,7 +116,7 @@ class Goblin(GameObject):
 
     def _update_sprite_flip(self):
         if self.sprite:
-            self.sprite.flip = "h" if self.dir >= 0 else ""
+            self.sprite.flip = "" if self.dir >= 0 else "h"
 
     def update(self, target=None):
         if self.hp <= 0:
@@ -188,7 +189,8 @@ class Goblin(GameObject):
 
         target = self.perception.target
         target_dx = abs(target.x - self.x) if target else BASE_ATTACK_DISTANCE
-        attack_distance = max(BASE_ATTACK_DISTANCE, min(DETECTION_RANGE, target_dx))
+        scaled_reach = target_dx * ATTACK_RANGE_SCALE
+        attack_distance = max(BASE_ATTACK_DISTANCE, min(DETECTION_RANGE, scaled_reach))
 
         start_pos = (self.x, self.y)
         end_pos = (self.x + self.dir * attack_distance, self.y)
