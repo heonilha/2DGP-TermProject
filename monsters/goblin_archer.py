@@ -6,6 +6,7 @@ from pico2d import get_canvas_height, get_canvas_width, load_image
 
 import game_framework
 import game_world
+from behavior_tree import Action, BehaviorTree, Condition, Selector, Sequence
 from collision_manager import CollisionGroup
 from components.component_combat import CombatComponent
 from components.component_collision import CollisionComponent
@@ -143,6 +144,23 @@ class GoblinArcher(GameObject):
         self.cooldown_timer = ATTACK_COOLDOWN
         self.arrow_fired = False
 
+        self.bt = BehaviorTree(
+            Selector(
+                "GoblinArcherSelector",
+                Sequence(
+                    "HandleAttack",
+                    Condition("IsAttacking", self.is_attacking),
+                    Action("RunAttack", self.run_attack_sequence),
+                ),
+                Sequence(
+                    "StartAttack",
+                    Condition("CanStartAttack", self.can_start_attack),
+                    Action("BeginPrepare", self.begin_prepare),
+                ),
+                Action("Patrol", self.handle_patrol),
+            )
+        )
+
     @property
     def x(self):
         return self.transform.x
@@ -186,20 +204,11 @@ class GoblinArcher(GameObject):
 
         self.perception.target = target
 
-        if self.state == "patrol":
-            self._update_patrol()
-            if self._can_start_attack():
-                self._start_prepare()
-        elif self.state == "prepare":
-            self._update_prepare()
-        elif self.state == "attack":
-            self._update_attack()
-        elif self.state == "cooldown":
-            self._update_cooldown()
+        self.bt.run()
 
         super().update()
 
-    def _update_patrol(self):
+    def handle_patrol(self):
         dt = game_framework.frame_time
         self.cooldown_timer = min(ATTACK_COOLDOWN, self.cooldown_timer + dt)
 
@@ -216,12 +225,32 @@ class GoblinArcher(GameObject):
             self.anim_timer -= MOVE_ANIM_SPEED
             self.frame = (self.frame + 1) % 3
 
+        return BehaviorTree.SUCCESS
+
     def _can_start_attack(self):
         return (
             self.perception.target
             and self.perception.is_in_range(DETECTION_RANGE)
             and self.cooldown_timer >= ATTACK_COOLDOWN
         )
+
+    def can_start_attack(self):
+        return (
+            BehaviorTree.SUCCESS
+            if self.state == "patrol" and self._can_start_attack()
+            else BehaviorTree.FAIL
+        )
+
+    def is_attacking(self):
+        return (
+            BehaviorTree.SUCCESS
+            if self.state in ("prepare", "attack", "cooldown")
+            else BehaviorTree.FAIL
+        )
+
+    def begin_prepare(self):
+        self._start_prepare()
+        return BehaviorTree.RUNNING
 
     def _start_prepare(self):
         target = self.perception.target
@@ -278,6 +307,20 @@ class GoblinArcher(GameObject):
         if self.cooldown_timer >= ATTACK_COOLDOWN:
             self.state = "patrol"
             self.frame = 0
+
+    def run_attack_sequence(self):
+        if self.state == "prepare":
+            self._update_prepare()
+            return BehaviorTree.RUNNING
+        if self.state == "attack":
+            self._update_attack()
+            return BehaviorTree.RUNNING
+        if self.state == "cooldown":
+            self._update_cooldown()
+            return (
+                BehaviorTree.RUNNING if self.state != "patrol" else BehaviorTree.SUCCESS
+            )
+        return BehaviorTree.FAIL
 
     def handle_collision(self, other):
         if getattr(other, "collision_group", None) == CollisionGroup.PROJECTILE:

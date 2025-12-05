@@ -6,6 +6,7 @@ from pico2d import load_image, get_canvas_width
 
 import game_framework
 import game_world
+from behavior_tree import Action, BehaviorTree, Condition, Selector, Sequence
 from collision_manager import CollisionGroup
 from components.component_combat import CombatComponent
 from components.component_collision import CollisionComponent
@@ -83,6 +84,27 @@ class Goblin(GameObject):
         self.attack_hit_registered = False
         self.cooldown_timer = ATTACK_COOLDOWN
 
+        self.attack_start_pos = (self.x, self.y)
+        self.attack_end_pos = (self.x, self.y)
+        self.attack_direction = (self.dir, 0)
+
+        self.bt = BehaviorTree(
+            Selector(
+                "GoblinSelector",
+                Sequence(
+                    "HandleAttack",
+                    Condition("IsAttacking", self.is_attacking),
+                    Action("RunAttack", self.run_attack_sequence),
+                ),
+                Sequence(
+                    "StartAttack",
+                    Condition("CanStartAttack", self.can_start_attack),
+                    Action("BeginPrepare", self.begin_prepare),
+                ),
+                Action("Patrol", self.handle_patrol),
+            )
+        )
+
     @property
     def x(self):
         return self.transform.x
@@ -126,20 +148,11 @@ class Goblin(GameObject):
 
         self.perception.target = target
 
-        if self.state == "patrol":
-            self._update_patrol()
-            if self._can_start_attack():
-                self._start_prepare()
-        elif self.state == "prepare":
-            self._update_prepare()
-        elif self.state == "attack":
-            self._update_attack()
-        elif self.state == "cooldown":
-            self._update_cooldown()
+        self.bt.run()
 
         super().update()
 
-    def _update_patrol(self):
+    def handle_patrol(self):
         dt = game_framework.frame_time
         self.cooldown_timer = min(ATTACK_COOLDOWN, self.cooldown_timer + dt)
 
@@ -156,6 +169,8 @@ class Goblin(GameObject):
             self.anim_timer -= MOVE_ANIM_SPEED
             self.frame = (self.frame + 1) % 3
 
+        return BehaviorTree.SUCCESS
+
     def _can_start_attack(self):
         return (
             self.perception.target
@@ -163,11 +178,43 @@ class Goblin(GameObject):
             and self.cooldown_timer >= ATTACK_COOLDOWN
         )
 
+    def can_start_attack(self):
+        return BehaviorTree.SUCCESS if self.state == "patrol" and self._can_start_attack() else BehaviorTree.FAIL
+
+    def is_attacking(self):
+        return BehaviorTree.SUCCESS if self.state in ("prepare", "attack", "cooldown") else BehaviorTree.FAIL
+
+    def begin_prepare(self):
+        self._start_prepare()
+        return BehaviorTree.RUNNING
+
     def _start_prepare(self):
         target = self.perception.target
         if target:
             self.dir = -1 if target.x < self.x else 1
             self._update_sprite_flip()
+            dx = target.x - self.x
+            dy = target.y - self.y
+            distance = math.hypot(dx, dy)
+            attack_distance = max(
+                BASE_ATTACK_DISTANCE,
+                min(DETECTION_RANGE, distance * ATTACK_RANGE_SCALE),
+            )
+            if dx == 0 and dy == 0:
+                dir_x, dir_y = self.dir, 0
+            else:
+                dir_x, dir_y = dx / distance, dy / distance
+        else:
+            attack_distance = BASE_ATTACK_DISTANCE
+            dir_x, dir_y = self.dir, 0
+
+        self.attack_direction = (dir_x, dir_y)
+        self.attack_start_pos = (self.x, self.y)
+        self.attack_end_pos = (
+            self.x + dir_x * attack_distance,
+            self.y + dir_y * attack_distance,
+        )
+
         self.state = "prepare"
         self.prepare_timer = 0.0
         self.movement.xdir = 0
@@ -188,29 +235,12 @@ class Goblin(GameObject):
         self.cooldown_timer = 0.0
         self.dash_done = False
 
-        target = self.perception.target
-        if target:
-            dx = target.x - self.x
-            dy = target.y - self.y
-            distance = math.hypot(dx, dy)
-            attack_distance = max(
-                BASE_ATTACK_DISTANCE,
-                min(DETECTION_RANGE, distance * ATTACK_RANGE_SCALE),
-            )
-            if dx == 0 and dy == 0:
-                dir_x, dir_y = self.dir, 0
-            else:
-                dir_x, dir_y = dx / distance, dy / distance
-            self.dir = -1 if dir_x < 0 else 1
-        else:
-            attack_distance = BASE_ATTACK_DISTANCE
-            dir_x, dir_y = self.dir, 0
+        dir_x, _ = self.attack_direction
+        self.dir = -1 if dir_x < 0 else 1
+        self._update_sprite_flip()
 
-        start_pos = (self.x, self.y)
-        end_pos = (
-            self.x + dir_x * attack_distance,
-            self.y + dir_y * attack_distance,
-        )
+        start_pos = self.attack_start_pos
+        end_pos = self.attack_end_pos
 
         self.collision.offset_x = self.dir * (HITBOX_EXTRA * 0.5)
         self.collision.override_width = self.transform.w + HITBOX_EXTRA
@@ -244,6 +274,18 @@ class Goblin(GameObject):
         if self.cooldown_timer >= ATTACK_COOLDOWN:
             self.state = "patrol"
             self.frame = 0
+
+    def run_attack_sequence(self):
+        if self.state == "prepare":
+            self._update_prepare()
+            return BehaviorTree.RUNNING
+        if self.state == "attack":
+            self._update_attack()
+            return BehaviorTree.RUNNING
+        if self.state == "cooldown":
+            self._update_cooldown()
+            return BehaviorTree.RUNNING if self.state != "patrol" else BehaviorTree.SUCCESS
+        return BehaviorTree.FAIL
 
     def handle_collision(self, other):
         if getattr(other, "collision_group", None) == CollisionGroup.PROJECTILE:
