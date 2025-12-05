@@ -69,9 +69,7 @@ class Slime(GameObject):
         )
         self.combat = self.add_component(CombatComponent(10))
         self.movement = self.add_component(MovementComponent())
-        self.perception = self.add_component(
-            PerceptionComponent(ATTACK_RANGE, target_getter=lambda: game_world.player[0] if game_world.player else None)
-        )
+        self.perception = self.add_component(PerceptionComponent())
         self.hud = self.add_component(HUDComponent())
 
         self.y_base = self.transform.y
@@ -86,7 +84,6 @@ class Slime(GameObject):
         self.preparing = False
         self.hopping = False
 
-        self.attack_range_squared = ATTACK_RANGE * ATTACK_RANGE
         self.attack_state = 'none'
         self.attack_cooltime = ATTACK_COOLTIME
         self.attack_cooltime_timer = self.attack_cooltime
@@ -167,7 +164,7 @@ class Slime(GameObject):
             game_world.remove_object(self)
             return
 
-        self.perception.set_target(zag)
+        self.perception.target = zag
 
         self.bt.run()
         super().update()
@@ -179,16 +176,12 @@ class Slime(GameObject):
         if self.attack_state != 'none' or self.hopping or self.preparing:
             return BehaviorTree.FAIL
 
-        distance_sq = self.perception.distance_sq_to_target()
-        if distance_sq is None:
-            return BehaviorTree.FAIL
-
-        if distance_sq <= self.attack_range_squared and self.attack_cooltime_timer >= self.attack_cooltime:
+        if self.perception.is_in_range(ATTACK_RANGE) and self.attack_cooltime_timer >= self.attack_cooltime:
             return BehaviorTree.SUCCESS
         return BehaviorTree.FAIL
 
     def begin_attack(self):
-        target = self.perception.get_target()
+        target = self.perception.target
         if not target:
             return BehaviorTree.FAIL
 
@@ -293,11 +286,6 @@ class Slime(GameObject):
 
     def draw(self):
         super().draw()
-
-    def get_distance_to_zag_sq(self, zag):
-        dx = self.x - zag.x
-        dy = self.y - zag.y
-        return dx * dx + dy * dy
 
     def handle_collision(self, other):
         if getattr(other, "collision_group", None) == CollisionGroup.PROJECTILE:
