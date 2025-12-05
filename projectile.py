@@ -1,3 +1,5 @@
+import math
+
 from collision_manager import CollisionGroup
 from game_object import GameObject
 from components.component_transform import TransformComponent
@@ -32,8 +34,16 @@ class Projectile(GameObject):
 
     def set_direction(self, direction):
         dx, dy = direction
-        self.movement.xdir = dx
-        self.movement.ydir = dy
+        if dx == 0 and dy == 0:
+            angle = 0.0
+        else:
+            angle = math.atan2(dy, dx)
+
+        self.movement.xdir = math.cos(angle)
+        self.movement.ydir = math.sin(angle)
+
+        if self.render:
+            self.render.rotation = angle
 
     def handle_collision(self, other):
         if getattr(other, "collision_group", None) == CollisionGroup.MONSTER:

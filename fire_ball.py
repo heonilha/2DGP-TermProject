@@ -1,4 +1,3 @@
-import math
 import os
 
 from pico2d import load_image
@@ -19,7 +18,4 @@ class FireBall(Projectile):
         damage = 5
         speed = 1000
 
-        norm = math.hypot(direction[0], direction[1])
-        dir_x, dir_y = direction if norm == 0 else (direction[0] / norm, direction[1] / norm)
-
-        super().__init__(x, y, (dir_x, dir_y), speed, damage, 30, 30, FireBall.image)
+        super().__init__(x, y, direction, speed, damage, 30, 30, FireBall.image)
