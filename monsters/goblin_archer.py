@@ -16,6 +16,7 @@ from components.component_perception import PerceptionComponent
 from components.component_projectile import ProjectileComponent
 from components.component_render import RenderComponent
 from components.component_transform import TransformComponent
+from components.component_sprite import SpriteComponent
 from game_object import GameObject
 
 FRAME_W = 26  # 182 / 7
@@ -32,8 +33,8 @@ ATTACK_DAMAGE = 10
 
 DETECTION_RANGE = 320
 PATROL_RADIUS = 160
-ARROW_SPEED = 280
-ARROW_SIZE = (40, 10)
+ARROW_SPEED = 400
+ARROW_SIZE = (80,10)
 
 
 class Arrow(GameObject):
@@ -63,9 +64,7 @@ class Arrow(GameObject):
             )
         )
         self.projectile = self.add_component(ProjectileComponent(ATTACK_DAMAGE))
-        self.render = self.add_component(
-            RenderComponent(Arrow._arrow_image, Arrow._arrow_image.w, Arrow._arrow_image.h)
-        )
+        self.render = self.add_component(RenderComponent(Arrow._arrow_image))
 
         self.set_direction(direction)
 
