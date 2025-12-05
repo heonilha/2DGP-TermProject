@@ -14,7 +14,7 @@ from components.component_hud import HUDComponent
 from components.component_move import MovementComponent
 from components.component_perception import PerceptionComponent
 from components.component_projectile import ProjectileComponent
-from components.component_sprite import SpriteComponent
+from components.component_render import RenderComponent
 from components.component_transform import TransformComponent
 from game_object import GameObject
 
@@ -63,25 +63,24 @@ class Arrow(GameObject):
             )
         )
         self.projectile = self.add_component(ProjectileComponent(ATTACK_DAMAGE))
-        self.sprite = self.add_component(
-            SpriteComponent(Arrow._arrow_image, Arrow._arrow_image.w, Arrow._arrow_image.h)
+        self.render = self.add_component(
+            RenderComponent(Arrow._arrow_image, Arrow._arrow_image.w, Arrow._arrow_image.h)
         )
 
         self.set_direction(direction)
 
     def set_direction(self, direction):
         dx, dy = direction
-        length = math.sqrt(dx * dx + dy * dy)
-        if length == 0:
-            self.movement.xdir = 1
-            self.movement.ydir = 0
-            return
-        self.movement.xdir = dx / length
-        self.movement.ydir = dy / length
+        if dx == 0 and dy == 0:
+            angle = 0.0
+        else:
+            angle = math.atan2(dy, dx)
 
-        if self.sprite:
-            # Arrow art faces left by default, so flip when traveling right.
-            self.sprite.flip = "" if self.movement.xdir >= 0 else "h"
+        self.movement.xdir = math.cos(angle)
+        self.movement.ydir = math.sin(angle)
+
+        if self.render:
+            self.render.rotation = angle
 
     def handle_collision(self, other):
         if getattr(other, "collision_group", None) == CollisionGroup.PLAYER:
