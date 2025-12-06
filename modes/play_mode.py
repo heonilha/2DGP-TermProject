@@ -4,6 +4,7 @@ import game_framework
 import game_world
 import os
 from modes import select_mode
+import camera
 
 from zag import Zag
 from monsters.goblin import Goblin
@@ -49,6 +50,8 @@ def init():
     victory_background_path = os.path.join(BASE_DIR, 'resource', 'Image', 'GUI','clearEmptyImage.png')
     victory_background = load_image(victory_background_path)
     victory_timer = 2.0
+
+    game_world.camera = camera.Camera(1600,900)
 
     global zag
     if zag is None:
@@ -112,6 +115,9 @@ def update():
                 o.update(zag)
             else:
                 o.update()
+
+    if game_world.camera:
+        game_world.camera.update(zag)
     game_world.handle_collisions()
 
     monster_exists = False

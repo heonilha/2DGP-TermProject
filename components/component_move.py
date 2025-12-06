@@ -1,5 +1,5 @@
 from enum import Enum
-
+from pico2d import clamp, get_canvas_width, get_canvas_height
 import game_framework
 
 from components.component_base import Component
@@ -82,6 +82,9 @@ class MovementComponent(Component):
 
             tr.x += self.xdir * self.speed * dt
             tr.y += self.ydir * self.speed * dt
+            # 화면 밖으로 나가지 않도록 클램핑
+            tr.x = clamp(200, tr.x, get_canvas_width()-200)
+            tr.y = clamp(100, tr.y, get_canvas_height()*2-100)
         elif self.type == MovementType.LINEAR:
             self.update_linear(tr)
         elif self.type == MovementType.PARABOLIC:

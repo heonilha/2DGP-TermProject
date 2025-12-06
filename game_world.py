@@ -2,6 +2,8 @@
 
 from collision_manager import CollisionGroup, collision_manager
 
+camera = None
+
 world = [[] for _ in range(4)]
 group_objects = {group: [] for group in CollisionGroup}
 
@@ -31,9 +33,13 @@ def update():
 
 
 def render():
+    cam = camera
     for layer in world:
         for o in layer:
-            o.draw()
+            if hasattr(o, "draw_with_camera"):
+                o.draw_with_camera(cam)
+            else:
+                o.draw()
 
 
 def clear():
