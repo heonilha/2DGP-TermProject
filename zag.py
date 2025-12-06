@@ -279,7 +279,7 @@ class Zag(GameObject):
         self.state_machine.update()
         super().update()
 
-    def draw(self):
+    def draw_with_camera(self, camera):
         if getattr(self.state_machine, 'cur_state', None) == self.DIE:
             self.DIE.draw()
             return
@@ -294,7 +294,7 @@ class Zag(GameObject):
             original_visible = sprite.visible
             sprite.visible = should_draw_body
 
-        super().draw()
+        super().draw_with_camera(camera)
 
         if original_visible is not None:
             sprite.visible = original_visible
