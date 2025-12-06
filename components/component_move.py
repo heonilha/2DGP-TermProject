@@ -1,5 +1,5 @@
 from enum import Enum
-from pico2d import clamp
+
 import game_framework
 
 from components.component_base import Component

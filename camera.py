@@ -1,4 +1,4 @@
-from pico2d import get_canvas_width, get_canvas_height, clamp
+from pico2d import get_canvas_width, get_canvas_height
 
 
 class Camera:
@@ -9,4 +9,4 @@ class Camera:
     def update(self, target):
         h = get_canvas_height()
 
-        self.y = clamp(0,target.y - h // 4, 1800)
+        self.y = target.y - h // 2

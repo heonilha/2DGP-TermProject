@@ -21,8 +21,8 @@ class Background:
             return
         offset_y = camera.y if camera else 0
 
-        center_y = clamp(0,self.image.h*2 - offset_y,self.image.h*2)
-        self.image.draw(get_canvas_width()//2, center_y, get_canvas_width(), get_canvas_height()*2)
+        center_y = (self.image.h // 2) - offset_y
+        self.image.draw(get_canvas_width()//2, center_y, get_canvas_width(), get_canvas_height())
 
     def update(self):
         pass

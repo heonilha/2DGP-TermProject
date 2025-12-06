@@ -1,5 +1,5 @@
 from components.component_transform import TransformComponent
-from pico2d import clamp
+
 
 class GameObject:
     def __init__(self):
@@ -34,7 +34,6 @@ class GameObject:
             original_pos = (tr.x, tr.y)
             tr.x -= camera.x
             tr.y -= camera.y
-
 
         try:
             for c in self.components:
