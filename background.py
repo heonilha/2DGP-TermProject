@@ -22,7 +22,7 @@ class Background:
         offset_y = camera.y if camera else 0
 
         center_y = (self.image.h // 2) - offset_y
-        self.image.draw(get_canvas_width()//2, center_y, get_canvas_width(), get_canvas_height())
+        self.image.draw(get_canvas_width()//2, center_y, get_canvas_width(), get_canvas_height()*2)
 
     def update(self):
         pass
