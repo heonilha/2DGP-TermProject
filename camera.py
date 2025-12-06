@@ -7,8 +7,6 @@ class Camera:
         self.y = 0
 
     def update(self, target):
-        w = get_canvas_width()
         h = get_canvas_height()
 
-        self.x = target.x - w // 2
         self.y = target.y - h // 2
