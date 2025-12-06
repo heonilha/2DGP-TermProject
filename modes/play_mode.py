@@ -51,7 +51,7 @@ def init():
     victory_background = load_image(victory_background_path)
     victory_timer = 2.0
 
-    game_world.camera = camera.Camera()
+    game_world.camera = camera.Camera(1600,900)
 
     global zag
     zag = Zag()

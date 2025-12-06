@@ -14,15 +14,27 @@ class Background:
         self.image = Background._cache[filename]
 
     def draw(self):
-        self.image.draw(get_canvas_width()//2, get_canvas_height()//2, get_canvas_width(), get_canvas_height())
+        self.image.draw(get_canvas_width()//2, get_canvas_height()//2, get_canvas_width(), get_canvas_height()*2)
 
     def draw_with_camera(self, camera):
-        if not self.image:
-            return
-        offset_y = camera.y if camera else 0
+        cw = get_canvas_width()
+        ch = get_canvas_height()
 
-        center_y = (self.image.h // 2) - offset_y
-        self.image.draw(get_canvas_width()//2, center_y, get_canvas_width(), get_canvas_height()*2)
+        # 배경의 실제 렌더링 높이 (2배)
+        bg_h = ch * 2
+
+        # 카메라 offset
+        offset_y = int(camera.y)
+
+        # 배경의 중심 y = (배경 전체의 중앙) - offset
+        center_y = bg_h // 2 - offset_y
+
+        self.image.draw(
+            cw // 2,
+            center_y,
+            cw,
+            bg_h
+        )
 
     def update(self):
         pass
