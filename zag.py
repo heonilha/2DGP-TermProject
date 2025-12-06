@@ -268,6 +268,9 @@ class Zag(GameObject):
         self.combat.invincible_timer = max(0.0, value)
 
     def update(self):
+        self.x=clamp(50, self.x, get_canvas_width()-50)
+        self.y=clamp(50, self.y, get_canvas_height()-50)
+
         if self.hp <= 0 and self.state_machine.cur_state != self.DIE:
             self.state_machine.handle_state_event(('DIE', None))
             self.state_machine.update()
