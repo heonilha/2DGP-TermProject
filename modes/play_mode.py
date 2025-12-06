@@ -61,6 +61,10 @@ def init():
     global background
     background = Background(current_stage_data["background"])
     game_world.add_object(background, 0)
+
+    if game_world.camera:
+        game_world.camera.world_width = background.image.w
+        game_world.camera.world_height = background.image.h * 2
     global game_running
     game_running=True
 
