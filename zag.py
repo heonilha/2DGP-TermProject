@@ -278,6 +278,7 @@ class Zag(GameObject):
 
         self.state_machine.update()
         super().update()
+        self._clamp_to_stage()
 
     def draw_with_camera(self, camera):
         if getattr(self.state_machine, 'cur_state', None) == self.DIE:
@@ -314,4 +315,15 @@ class Zag(GameObject):
             self.combat.take_damage(10)
             if self.hp < prev_hp:
                 print(f'Zag HP: {self.hp}')
+
+    def _clamp_to_stage(self):
+        cam = getattr(game_world, "camera", None)
+        world_width = getattr(cam, "world_width", get_canvas_width())
+        world_height = getattr(cam, "world_height", get_canvas_height())
+
+        half_w = self.w / 2
+        half_h = self.h / 2
+
+        self.x = max(half_w, min(world_width - half_w, self.x))
+        self.y = max(half_h, min(world_height - half_h, self.y))
 
