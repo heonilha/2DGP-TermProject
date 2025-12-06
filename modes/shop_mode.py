@@ -4,6 +4,8 @@ from sdl2 import SDL_BUTTON_LEFT, SDL_KEYDOWN, SDL_MOUSEBUTTONDOWN, SDL_QUIT, SD
 
 import game_framework
 import game_world
+from modes import play_mode
+from zag import Zag
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
@@ -17,10 +19,20 @@ class ShopMode:
         self.mp_button = (350, 150, 300, 60)
 
     def init(self):
-        self.player = game_world.player[0]
+        self.player = self._get_or_create_player()
         background_path = os.path.join(BASE_DIR, "resource", "Image", "GUI", "shop_bg.png")
         self.background = load_image(background_path)
         self.font = load_font("ENCR10B.TTF", 30)
+
+    def _get_or_create_player(self):
+        if game_world.player:
+            return game_world.player[0]
+
+        if getattr(play_mode, "zag", None) is not None:
+            return play_mode.zag
+
+        play_mode.zag = Zag()
+        return play_mode.zag
 
     def handle_events(self):
         for event in get_events():
