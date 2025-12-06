@@ -51,8 +51,12 @@ def init():
     victory_timer = 2.0
 
     global zag
-    zag = Zag()
-    game_world.add_object(zag, 1)
+    if zag is None:
+        zag = Zag()
+
+    already_added = any(zag in layer for layer in game_world.world)
+    if not already_added:
+        game_world.add_object(zag, 1)
     _spawn_stage_monsters()
 
     global background
