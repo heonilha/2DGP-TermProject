@@ -1,18 +1,22 @@
-from pico2d import draw_rectangle
+import os
+
+from pico2d import load_image
 
 from components.component_base import Component
 from components.component_transform import TransformComponent
 
 
 class HUDComponent(Component):
-    def __init__(self, hp_width=50, hp_height=5, mp_width=50, mp_height=5, hp_offset=40, mp_offset=50):
+    hp_bar_image = None
+
+    def __init__(self, hp_offset=40):
         super().__init__()
-        self.hp_width = hp_width
-        self.hp_height = hp_height
-        self.mp_width = mp_width
-        self.mp_height = mp_height
         self.hp_offset = hp_offset
-        self.mp_offset = mp_offset
+
+        if HUDComponent.hp_bar_image is None:
+            base_dir = os.path.dirname(os.path.dirname(__file__))
+            hp_bar_path = os.path.join(base_dir, 'resource', 'Image', 'GUI', 'hp_bar.png')
+            HUDComponent.hp_bar_image = load_image(hp_bar_path)
 
     def draw(self):
         owner = self.owner
@@ -20,16 +24,13 @@ class HUDComponent(Component):
         if not tr:
             return
 
-        if getattr(owner, 'hp', 0) > 0:
-            hp_bar_x = tr.x - self.hp_width // 2
-            hp_bar_y = tr.y + self.hp_offset
-            draw_rectangle(hp_bar_x, hp_bar_y, hp_bar_x + self.hp_width, hp_bar_y + self.hp_height, 100, 100, 100)
-            current_hp_width = int(self.hp_width * (owner.hp / owner.combat.max_hp))
-            draw_rectangle(hp_bar_x, hp_bar_y, hp_bar_x + current_hp_width, hp_bar_y + self.hp_height, 255, 0, 0)
+        if getattr(owner, 'hp', 0) > 0 and getattr(owner, 'combat', None):
+            hp_ratio = max(0.0, min(1.0, owner.hp / owner.combat.max_hp))
+            bar_width = int(HUDComponent.hp_bar_image.w * hp_ratio)
+            bar_height = HUDComponent.hp_bar_image.h
 
-        if getattr(owner, 'mp', 0) > 0:
-            mp_bar_x = tr.x - self.mp_width // 2
-            mp_bar_y = tr.y + self.mp_offset
-            draw_rectangle(mp_bar_x, mp_bar_y, mp_bar_x + self.mp_width, mp_bar_y + self.mp_height, 100, 100, 100)
-            current_mp_width = int(self.mp_width * (owner.mp / 100))
-            draw_rectangle(mp_bar_x, mp_bar_y, mp_bar_x + current_mp_width, mp_bar_y + self.mp_height, 0, 0, 255)
+            if bar_width > 0:
+                bar_left = tr.x - HUDComponent.hp_bar_image.w // 2
+                bar_x = bar_left + bar_width / 2
+                bar_y = tr.y + self.hp_offset
+                HUDComponent.hp_bar_image.clip_draw(0, 0, bar_width, bar_height, bar_x, bar_y, bar_width, bar_height)
