@@ -14,7 +14,6 @@ from components.component_combat import CombatComponent
 from components.component_attack import AttackComponent
 from components.component_skill import SkillComponent
 from components.component_input import InputComponent
-from components.component_hud import HUDComponent
 from components.component_collision import CollisionComponent
 
 
@@ -161,7 +160,6 @@ class Zag(GameObject):
                 }
             )
         )
-        self.hud_component = self.add_component(HUDComponent())
         self.collision_group = CollisionGroup.PLAYER
         self.collision = self.add_component(
             CollisionComponent(
