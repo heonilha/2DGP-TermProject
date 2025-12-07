@@ -15,6 +15,7 @@ class GameUI:
     def draw(self, player):
         canvas_height = get_canvas_height()
 
+        # 화면 왼쪽 위를 기준으로 플레이어 HP/MP 바를 그립니다.
         bar_left = 40
         hp_bar_y = canvas_height - 40
         mp_bar_y = hp_bar_y - 30
@@ -26,11 +27,13 @@ class GameUI:
                 hp_x = bar_left + hp_width / 2
                 self.hp_bar_image.clip_draw(0, 0, hp_width, self.hp_bar_image.h, hp_x, hp_bar_y, hp_width, self.hp_bar_image.h)
 
-        mp_ratio = max(0.0, min(1.0, getattr(player, 'mp', 0) / 100))
-        mp_width = int(self.mp_bar_image.w * mp_ratio)
-        if mp_width > 0:
-            mp_x = bar_left + mp_width / 2
-            self.mp_bar_image.clip_draw(0, 0, mp_width, self.mp_bar_image.h, mp_x, mp_bar_y, mp_width, self.mp_bar_image.h)
+        max_mp = getattr(player, 'max_mp', 100)
+        if max_mp > 0:
+            mp_ratio = max(0.0, min(1.0, getattr(player, 'mp', 0) / max_mp))
+            mp_width = int(self.mp_bar_image.w * mp_ratio)
+            if mp_width > 0:
+                mp_x = bar_left + mp_width / 2
+                self.mp_bar_image.clip_draw(0, 0, mp_width, self.mp_bar_image.h, mp_x, mp_bar_y, mp_width, self.mp_bar_image.h)
 
         # --- HP 물약 그리기 (화면 왼쪽 아래) ---
         # 이미지 그리기 (x=50, y=100)

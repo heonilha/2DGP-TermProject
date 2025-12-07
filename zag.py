@@ -170,12 +170,14 @@ class Zag(GameObject):
             )
         )
 
-        self.mp = 100
+        self.max_mp = 100
+        self._mp = self.max_mp
         self.attack_cooldown = 1.0
         self.attack_cooldown_timer = 0.0
         self.hp_potions = 3
         self.mp_potions = 3
         self.gold = 0
+        self.use_ui_hp_bar = True
 
         self.IDLE = Idle(self)
         self.RUN = Run(self)
@@ -264,6 +266,14 @@ class Zag(GameObject):
     @invincibleTimer.setter
     def invincibleTimer(self, value):
         self.combat.invincible_timer = max(0.0, value)
+
+    @property
+    def mp(self):
+        return self._mp
+
+    @mp.setter
+    def mp(self, value):
+        self._mp = max(0, min(self.max_mp, value))
 
     def update(self):
         if self.hp <= 0 and self.state_machine.cur_state != self.DIE:
