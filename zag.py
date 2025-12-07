@@ -176,6 +176,7 @@ class Zag(GameObject):
         self.hp_potions = 3
         self.mp_potions = 3
         self.gold = 0
+        self.use_ui_hp_bar = True
 
         self.IDLE = Idle(self)
         self.RUN = Run(self)
