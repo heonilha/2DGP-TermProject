@@ -12,19 +12,18 @@ class GameUI:
 
     def draw(self, player):
         # --- HP 물약 그리기 (화면 왼쪽 아래) ---
-        # 이미지 그리기 (x=50, y=100)
-        self.hp_potion_image.draw(50, 100)
+        self.hp_potion_image.draw(250, 160)
 
         # 개수 텍스트 그리기 (Zag 인벤토리에서 가져옴)
         hp_count = player.hp_potions
-        self.font.draw(100, 100, f'x {hp_count}', (255, 255, 255))  # 흰색 글씨
+        self.font.draw(300, 160, f'x {hp_count}', (255, 255, 255))  # 흰색 글씨
 
         # --- MP 물약 그리기 (HP 물약 아래) ---
-        self.mp_potion_image.draw(50, 50)
+        self.mp_potion_image.draw(250, 100)
 
         mp_count = player.mp_potions
-        self.font.draw(100, 50, f'x {mp_count}', (255, 255, 255))
+        self.font.draw(300, 100, f'x {mp_count}', (255, 255, 255))
         # --- 골드 그리기 (화면 오른쪽 위) ---
-        self.gold_image.draw(1050, 580)
+        self.gold_image.draw(1250, 800)
         gold_count = player.gold
-        self.font.draw(1100, 580, f'x {gold_count}', (255, 255, 0))  # 노란색 글씨
+        self.font.draw(1300, 800, f'x {gold_count}', (255, 255, 0))  # 노란색 글씨
