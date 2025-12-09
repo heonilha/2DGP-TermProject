@@ -115,6 +115,7 @@ class SlimeKing(GameObject):
         self.vertical_velocity = 0.0
         self.horizontal_velocity = 0.0
         self.jump_target_x = self.x
+        self.jump_target_y = self.y
         self.falling = False
         self.fall_anim_index = 0
         self.landing_attack_timer = 0.0
@@ -297,6 +298,9 @@ class SlimeKing(GameObject):
             self.attack_hold_timer += dt
             if self.attack_hold_timer >= ATTACK_HOLD_DURATION:
                 self.attack_state = "dash"
+                # 돌진 시작 시 6번째 프레임을 사용해 충격을 강조
+                self.frame_index = ATTACK_FRAME_COUNT - 1
+                self.frame = self.frame_indices[self.frame_index]
             return BehaviorTree.RUNNING
 
         if self.attack_state == "dash":
@@ -351,7 +355,9 @@ class SlimeKing(GameObject):
 
         # 플레이어 위치를 향해 점프하도록 목표 좌표를 설정
         target_x = target.x if target else self.x + self.dir * 80
+        target_y = target.y if target else self.y_base
         self.jump_target_x = target_x
+        self.jump_target_y = target_y
 
         if target:
             self.dir = -1 if target.x < self.x else 1
@@ -375,8 +381,22 @@ class SlimeKing(GameObject):
                 self._set_animation(self.back_image, [3, 2, 1, 0])
                 self.frame = 3
 
-                total_time = max(0.2, (2 * self.vertical_velocity) / abs(GRAVITY))
-                self.horizontal_velocity = (self.jump_target_x - self.x) / total_time
+                # 목표 y를 고려해 비행 시간을 계산한 뒤 x 속도를 설정
+                start_y = self.y
+                target_y = self.jump_target_y
+                a = 0.5 * GRAVITY
+                b = self.vertical_velocity
+                c = start_y - target_y
+                discriminant = b * b - 4 * a * c
+                if discriminant >= 0:
+                    sqrt_disc = discriminant ** 0.5
+                    t1 = (-b + sqrt_disc) / (2 * a)
+                    t2 = (-b - sqrt_disc) / (2 * a)
+                    positive_times = [t for t in (t1, t2) if t > 0]
+                    flight_time = max(positive_times) if positive_times else max(0.2, (2 * self.vertical_velocity) / abs(GRAVITY))
+                else:
+                    flight_time = max(0.2, (2 * self.vertical_velocity) / abs(GRAVITY))
+                self.horizontal_velocity = (self.jump_target_x - self.x) / flight_time
             return BehaviorTree.RUNNING
 
         if self.jump_attack_state == "air":
@@ -397,14 +417,15 @@ class SlimeKing(GameObject):
                     self.fall_anim_index += 1
                     self.frame = self.frame_indices[self.fall_anim_index]
 
-            if self.y <= self.y_base:
-                self.y = self.y_base
+            if self.y <= self.jump_target_y:
+                self.y = self.jump_target_y
                 self.jump_attack_state = "landing"
                 self.landing_attack_timer = 0.2
                 self.frame = self.frame_indices[-1]
                 self.horizontal_velocity = 0.0
                 self.vertical_velocity = 0.0
                 self.collision.mask = self.default_collision_mask
+                self.y_base = self.jump_target_y
                 return BehaviorTree.RUNNING
 
         if self.jump_attack_state == "landing":
