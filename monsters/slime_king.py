@@ -19,7 +19,7 @@ from game_object import GameObject
 
 FRAME_W = 32
 FRAME_H = 41
-SCALE = 3
+SCALE = 6  # 기존 대비 2배 확장해 거대한 보스 느낌을 줌
 
 IDLE_FRAMES = [1, 2, 3]  # Idle/Hop 에서 사용할 프레임 인덱스
 IDLE_ANIM_SPEED = 0.14
@@ -58,7 +58,8 @@ class SlimeKing(GameObject):
             raise FileNotFoundError("SlimeKing sprite resources are missing")
 
         start_x = random.randint(150, 1050)
-        start_y = random.randint(200, 650)
+        # 플레이어가 위로 올라가야 하는 보스 위치를 강조하기 위해 시작 y 값을 높임
+        start_y = random.randint(400, 900)
 
         self.transform = self.add_component(TransformComponent(start_x, start_y, FRAME_W * SCALE, FRAME_H * SCALE))
         self.sprite = self.add_component(SpriteComponent(load_image(idle_path), FRAME_W, FRAME_H))
@@ -331,10 +332,15 @@ class SlimeKing(GameObject):
         self._set_animation(self.back_image, [3, 2, 1, 0])
         self.frame = 3
 
+        # 플레이어 위치를 향해 점프하도록 목표 좌표를 설정
         target_x = target.x if target else self.x + self.dir * 80
         total_time = max(0.2, (2 * self.vertical_velocity) / abs(GRAVITY))
         self.horizontal_velocity = (target_x - self.x) / total_time
         self.jump_target_x = target_x
+
+        if target:
+            self.dir = -1 if target.x < self.x else 1
+            self._update_sprite_flip()
         return BehaviorTree.RUNNING
 
     def run_jump_attack(self):
