@@ -6,6 +6,7 @@ STAGES = {
         "id": 1,
         "background": "bg1.png",
         "monsters": [
+            {"type": "SlimeKing", "count": 1},
             {"type": "Slime", "count": 5},
         ],
     },
