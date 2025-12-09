@@ -86,7 +86,8 @@ class SlimeKing(GameObject):
         self.combat = self.add_component(CombatComponent(160))
         self.movement = self.add_component(MovementComponent(70))
         self.perception = self.add_component(PerceptionComponent())
-        self.hud = self.add_component(HUDComponent())
+        # HP 바를 보스에 맞게 키우고 조금 더 위로 배치
+        self.hud = self.add_component(HUDComponent(hp_width=80, hp_height=8, hp_offset=80))
 
         self.dir = -1
         self._update_sprite_flip()
