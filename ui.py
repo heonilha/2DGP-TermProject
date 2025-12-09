@@ -16,7 +16,7 @@ class GameUI:
 
     def draw(self, player):
         canvas_width, canvas_height = get_canvas_width(), get_canvas_height()
-        ui_left_x = 200
+        ui_left_x = 300
         hp_bar_y = canvas_height - 80
         mp_bar_y = canvas_height - 120
 
