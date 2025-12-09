@@ -83,7 +83,7 @@ class SlimeKing(GameObject):
             )
         )
         self.default_collision_mask = self.collision.mask
-        self.combat = self.add_component(CombatComponent(160))
+        self.combat = self.add_component(CombatComponent(50))
         self.movement = self.add_component(MovementComponent(70))
         self.perception = self.add_component(PerceptionComponent())
         # HP 바를 보스에 맞게 키우고 조금 더 위로 배치
