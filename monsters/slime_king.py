@@ -28,6 +28,7 @@ ATTACK_FRAME_COUNT = 6
 ATTACK_ANIM_SPEED = 0.12
 ATTACK_COOLTIME = 2.5
 ATTACK_DAMAGE = 25
+ATTACK_HOLD_DURATION = 1.0  # 돌진 전 텀
 
 HOP_DISTANCE = 55.0
 HOP_HEIGHT = 16.0
@@ -76,7 +77,7 @@ class SlimeKing(GameObject):
                 height=self.transform.h,
             )
         )
-        self.combat = self.add_component(CombatComponent(220))
+        self.combat = self.add_component(CombatComponent(160))
         self.movement = self.add_component(MovementComponent(70))
         self.perception = self.add_component(PerceptionComponent())
         self.hud = self.add_component(HUDComponent())
@@ -99,6 +100,7 @@ class SlimeKing(GameObject):
         self.attack_state = "none"
         self.attack_anim_timer = 0.0
         self.attack_cooltime_timer = ATTACK_COOLTIME
+        self.attack_hold_timer = 0.0
 
         # 점프 공격 상태 값
         self.jump_attack_state = "none"  # none/air/landing/recover
@@ -256,6 +258,7 @@ class SlimeKing(GameObject):
         self.attack_state = "prepare"
         self.attack_anim_timer = 0.0
         self.attack_cooltime_timer = 0.0
+        self.attack_hold_timer = 0.0
         self._set_animation(self.attack_image, list(range(ATTACK_FRAME_COUNT)))
 
         if target.x < self.x:
@@ -279,8 +282,14 @@ class SlimeKing(GameObject):
                     self.frame_index += 1
                     self.frame = self.frame_indices[self.frame_index]
                 if self.frame_index == ATTACK_FRAME_COUNT - 1:
-                    self.attack_state = "dash"
-                    self.attack_timer = 0.0
+                    self.attack_state = "hold"
+                    self.attack_hold_timer = 0.0
+            return BehaviorTree.RUNNING
+
+        if self.attack_state == "hold":
+            self.attack_hold_timer += dt
+            if self.attack_hold_timer >= ATTACK_HOLD_DURATION:
+                self.attack_state = "dash"
             return BehaviorTree.RUNNING
 
         if self.attack_state == "dash":
@@ -388,6 +397,10 @@ class SlimeKing(GameObject):
             if projectile_comp:
                 projectile_comp.on_hit(self)
         elif getattr(other, "collision_group", None) == CollisionGroup.PLAYER:
+            # 점프 공격 중 착지 전에는 충돌 피해를 주지 않음
+            if self.jump_attack_state == "air" and self.landing_attack_timer <= 0:
+                return
+
             combat = getattr(other, "combat", None)
             if combat:
                 if self.landing_attack_timer > 0:
