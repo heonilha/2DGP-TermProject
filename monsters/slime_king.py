@@ -10,6 +10,7 @@ from collision_manager import CollisionGroup
 from components.component_combat import CombatComponent
 from components.component_collision import CollisionComponent
 from components.component_hud import HUDComponent
+from components.component_attack import AttackComponent
 from components.component_move import MovementComponent, MovementType
 from components.component_perception import PerceptionComponent
 from components.component_projectile import ProjectileComponent
@@ -444,6 +445,13 @@ class SlimeKing(GameObject):
             if projectile_comp:
                 projectile_comp.on_hit(self)
         elif getattr(other, "collision_group", None) == CollisionGroup.PLAYER:
+            # 플레이어 근접 공격으로 명중했을 때 SlimeKing도 피해를 입도록 처리
+            attack_comp = other.get(AttackComponent) if hasattr(other, "get") else None
+            if attack_comp and attack_comp.is_attacking() and self not in attack_comp.hit_monsters:
+                attack_comp.hit_monsters.append(self)
+                if self.combat:
+                    self.combat.take_damage(attack_comp.damage)
+
             # 점프 공격 중 착지 전에는 충돌 피해를 주지 않음
             if self.jump_attack_state == "air" and self.landing_attack_timer <= 0:
                 return
