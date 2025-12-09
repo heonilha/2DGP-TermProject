@@ -20,11 +20,13 @@ from game_object import GameObject
 FRAME_W = 32
 FRAME_H = 41
 SCALE = 6  # 기존 대비 2배 확장해 거대한 보스 느낌을 줌
+COLLISION_SCALE = 0.85  # 스프라이트 대비 약간 줄인 히트박스
 
 IDLE_FRAMES = [1, 2, 3]  # Idle/Hop 에서 사용할 프레임 인덱스
 IDLE_ANIM_SPEED = 0.14
 
 ATTACK_FRAME_COUNT = 6
+ATTACK_STOP_FRAME_INDEX = 4  # 0-base, 5번째 프레임에서 돌진 정지
 ATTACK_ANIM_SPEED = 0.12
 ATTACK_COOLTIME = 2.5
 ATTACK_DAMAGE = 25
@@ -40,6 +42,7 @@ HOP_PREPARE_TIME = 0.5
 JUMP_ATTACK_COOLTIME = 4.0
 JUMP_ATTACK_PROB = 0.2
 JUMP_ATTACK_PROB_ENRAGE = 0.35
+JUMP_PREPARE_DURATION = 1.0
 JUMP_INITIAL_VELOCITY = 480.0
 GRAVITY = -950.0
 FALL_ANIM_SPEED = 0.08
@@ -69,14 +72,17 @@ class SlimeKing(GameObject):
         self.back_image = load_image(back_path)
 
         self.collision_group = CollisionGroup.MONSTER
+        collision_w = self.transform.w * COLLISION_SCALE
+        collision_h = self.transform.h * COLLISION_SCALE
         self.collision = self.add_component(
             CollisionComponent(
                 group=CollisionGroup.MONSTER,
                 mask=CollisionGroup.PLAYER | CollisionGroup.PROJECTILE,
-                width=self.transform.w,
-                height=self.transform.h,
+                width=collision_w,
+                height=collision_h,
             )
         )
+        self.default_collision_mask = self.collision.mask
         self.combat = self.add_component(CombatComponent(160))
         self.movement = self.add_component(MovementComponent(70))
         self.perception = self.add_component(PerceptionComponent())
@@ -103,7 +109,7 @@ class SlimeKing(GameObject):
         self.attack_hold_timer = 0.0
 
         # 점프 공격 상태 값
-        self.jump_attack_state = "none"  # none/air/landing/recover
+        self.jump_attack_state = "none"  # none/prepare/air/landing/recover
         self.jump_attack_cooltime = JUMP_ATTACK_COOLTIME
         self.jump_attack_timer = self.jump_attack_cooltime
         self.vertical_velocity = 0.0
@@ -112,6 +118,7 @@ class SlimeKing(GameObject):
         self.falling = False
         self.fall_anim_index = 0
         self.landing_attack_timer = 0.0
+        self.jump_prepare_timer = 0.0
 
         self.bt = BehaviorTree(
             Selector(
@@ -278,10 +285,10 @@ class SlimeKing(GameObject):
             self.attack_anim_timer += dt
             if self.attack_anim_timer >= ATTACK_ANIM_SPEED:
                 self.attack_anim_timer -= ATTACK_ANIM_SPEED
-                if self.frame_index < ATTACK_FRAME_COUNT - 1:
+                if self.frame_index < ATTACK_STOP_FRAME_INDEX:
                     self.frame_index += 1
                     self.frame = self.frame_indices[self.frame_index]
-                if self.frame_index == ATTACK_FRAME_COUNT - 1:
+                if self.frame_index >= ATTACK_STOP_FRAME_INDEX:
                     self.attack_state = "hold"
                     self.attack_hold_timer = 0.0
             return BehaviorTree.RUNNING
@@ -333,27 +340,44 @@ class SlimeKing(GameObject):
 
     def begin_jump_attack(self):
         target = self.perception.target
-        self.jump_attack_state = "air"
+        self.jump_attack_state = "prepare"
         self.jump_attack_timer = 0.0
-        self.vertical_velocity = JUMP_INITIAL_VELOCITY
+        self.vertical_velocity = 0.0
         self.falling = False
         self.fall_anim_index = 0
-        self._set_animation(self.back_image, [3, 2, 1, 0])
+        self.jump_prepare_timer = 0.0
+        self._set_animation(self.back_image, [3])
         self.frame = 3
 
         # 플레이어 위치를 향해 점프하도록 목표 좌표를 설정
         target_x = target.x if target else self.x + self.dir * 80
-        total_time = max(0.2, (2 * self.vertical_velocity) / abs(GRAVITY))
-        self.horizontal_velocity = (target_x - self.x) / total_time
         self.jump_target_x = target_x
 
         if target:
             self.dir = -1 if target.x < self.x else 1
             self._update_sprite_flip()
+
+        # 공중 공격 준비/도중에는 충돌을 완전히 비활성화
+        self.collision.mask = 0
         return BehaviorTree.RUNNING
 
     def run_jump_attack(self):
         dt = game_framework.frame_time
+
+        if self.jump_attack_state == "prepare":
+            self.jump_prepare_timer += dt
+            if self.jump_prepare_timer >= JUMP_PREPARE_DURATION:
+                self.jump_attack_state = "air"
+                self.vertical_velocity = JUMP_INITIAL_VELOCITY
+                self.falling = False
+                self.fall_anim_index = 0
+                self.anim_timer = 0.0
+                self._set_animation(self.back_image, [3, 2, 1, 0])
+                self.frame = 3
+
+                total_time = max(0.2, (2 * self.vertical_velocity) / abs(GRAVITY))
+                self.horizontal_velocity = (self.jump_target_x - self.x) / total_time
+            return BehaviorTree.RUNNING
 
         if self.jump_attack_state == "air":
             self.vertical_velocity += GRAVITY * dt
@@ -380,6 +404,7 @@ class SlimeKing(GameObject):
                 self.frame = self.frame_indices[-1]
                 self.horizontal_velocity = 0.0
                 self.vertical_velocity = 0.0
+                self.collision.mask = self.default_collision_mask
                 return BehaviorTree.RUNNING
 
         if self.jump_attack_state == "landing":
