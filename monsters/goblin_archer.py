@@ -1,4 +1,3 @@
-import math
 import os
 import random
 
@@ -13,11 +12,11 @@ from components.component_collision import CollisionComponent
 from components.component_hud import HUDComponent
 from components.component_move import MovementComponent
 from components.component_perception import PerceptionComponent
-from components.component_projectile import ProjectileComponent
 from components.component_render import RenderComponent
 from components.component_transform import TransformComponent
 from components.component_sprite import SpriteComponent
 from game_object import GameObject
+from projectile import Projectile
 
 FRAME_W = 26  # 182 / 7
 FRAME_H = 33
@@ -37,63 +36,30 @@ ARROW_SPEED = 400
 ARROW_SIZE = (80,10)
 
 
-class Arrow(GameObject):
+class Arrow(Projectile):
     _arrow_image = None
 
     def __init__(self, x, y, direction):
-        super().__init__()
-
         if Arrow._arrow_image is None:
             base_dir = os.path.dirname(os.path.dirname(__file__))
             image_path = os.path.join(base_dir, "resource", "Image", "Projectile", "arrow.png")
             if not os.path.exists(image_path):
                 raise FileNotFoundError(f"Arrow image not found: `{image_path}`")
             Arrow._arrow_image = load_image(image_path)
-
-        self.collision_group = CollisionGroup.MONSTER
-
         width, height = ARROW_SIZE
-        self.transform = self.add_component(TransformComponent(x, y, width, height))
-        self.movement = self.add_component(MovementComponent(ARROW_SPEED))
-        self.collision = self.add_component(
-            CollisionComponent(
-                group=CollisionGroup.MONSTER,
-                mask=CollisionGroup.PLAYER,
-                width=width,
-                height=height,
-            )
+        super().__init__(
+            x,
+            y,
+            direction,
+            speed=ARROW_SPEED,
+            damage=ATTACK_DAMAGE,
+            width=width,
+            height=height,
+            image=Arrow._arrow_image,
+            collision_mask=CollisionGroup.PLAYER,
+            knockback_x=120,
+            knockback_y=200,
         )
-        self.projectile = self.add_component(ProjectileComponent(ATTACK_DAMAGE))
-        self.render = self.add_component(RenderComponent(Arrow._arrow_image))
-
-        self.set_direction(direction)
-
-    def set_direction(self, direction):
-        dx, dy = direction
-        if dx == 0 and dy == 0:
-            angle = 0.0
-        else:
-            angle = math.atan2(dy, dx)
-
-        self.movement.xdir = math.cos(angle)
-        self.movement.ydir = math.sin(angle)
-
-        if self.render:
-            self.render.rotation = angle
-
-    def handle_collision(self, other):
-        if getattr(other, "collision_group", None) == CollisionGroup.PLAYER:
-            self.projectile.on_hit(other)
-
-    def update(self):
-        super().update()
-        if (
-            self.transform.x < -50
-            or self.transform.x > get_canvas_width() + 50
-            or self.transform.y < -50
-            or self.transform.y > get_canvas_height() + 50
-        ):
-            game_world.remove_object(self)
 
 
 class GoblinArcher(GameObject):
@@ -322,9 +288,5 @@ class GoblinArcher(GameObject):
 
     def handle_collision(self, other):
         if getattr(other, "collision_group", None) == CollisionGroup.PROJECTILE:
-            projectile_comp = other.get(ProjectileComponent) if hasattr(other, "get") else None
-            projectile_component = getattr(other, "projectile", None)
-            if projectile_comp:
-                projectile_comp.on_hit(self)
-            elif projectile_component:
-                projectile_component.on_hit(self)
+            self.state = "patrol"
+            self.frame = 0

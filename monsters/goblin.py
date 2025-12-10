@@ -13,7 +13,6 @@ from components.component_collision import CollisionComponent
 from components.component_hud import HUDComponent
 from components.component_move import MovementComponent, MovementType
 from components.component_perception import PerceptionComponent
-from components.component_projectile import ProjectileComponent
 from components.component_sprite import SpriteComponent
 from components.component_transform import TransformComponent
 from game_object import GameObject
@@ -289,12 +288,7 @@ class Goblin(GameObject):
 
     def handle_collision(self, other):
         if getattr(other, "collision_group", None) == CollisionGroup.PROJECTILE:
-            projectile_comp = other.get(ProjectileComponent) if hasattr(other, "get") else None
-            projectile_component = getattr(other, "projectile", None)
-            if projectile_comp:
-                projectile_comp.on_hit(self)
-            elif projectile_component:
-                projectile_component.on_hit(self)
+            self._enter_hit(other)
         elif getattr(other, "collision_group", None) == CollisionGroup.PLAYER and self.state == "attack":
             if not self.attack_hit_registered:
                 combat = getattr(other, "combat", None)
