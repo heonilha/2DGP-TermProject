@@ -29,7 +29,7 @@ BOMB_FRAME_W = 41
 BOMB_FRAME_H = 55
 BOMB_FRAME_COUNT = 6
 BOMB_ANIM_SPEED = 0.12
-BOMB_DAMAGE = 40
+BOMB_DAMAGE = 10
 BOMB_FLIGHT_GRAVITY = -900.0
 BOMB_MIN_HEIGHT = 90.0
 BOMB_LIFETIME = 3.0
@@ -38,7 +38,7 @@ GUN_FRAME_W = 54
 GUN_FRAME_H = 52
 GUN_FRAME_COUNT = 6
 GUN_ANIM_SPEED = 0.1
-MISSILE_DAMAGE = 15
+MISSILE_DAMAGE = 5
 MISSILE_SPEED = 420.0
 
 BACKRUN_FRAME_W = 45
@@ -289,7 +289,7 @@ class GoblinKing(GameObject):
         self.explosion_images = [load_image(p) for p in explosion_paths]
 
         start_x = random.randint(200, max(220, get_canvas_width() - 200))
-        start_y = random.randint(240, get_canvas_height())
+        start_y = random.randint(get_canvas_height(), get_canvas_height()+500)
 
         self.transform = self.add_component(
             TransformComponent(
