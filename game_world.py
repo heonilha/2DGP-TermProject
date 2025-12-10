@@ -64,6 +64,11 @@ def handle_collisions():
 
 
 def remove_object(o):
+    if getattr(o, "collision_group", None) == CollisionGroup.MONSTER:
+        for p in player:
+            if hasattr(p, "gold"):
+                p.gold += 60
+
     for layer in world:
         if o in layer:
             layer.remove(o)

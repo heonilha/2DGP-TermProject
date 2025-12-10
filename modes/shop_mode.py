@@ -4,6 +4,7 @@ from sdl2 import SDL_BUTTON_LEFT, SDL_KEYDOWN, SDL_MOUSEBUTTONDOWN, SDL_QUIT, SD
 
 import game_framework
 import game_world
+import bgm_manager
 from modes import play_mode
 from zag import Zag
 
@@ -25,6 +26,7 @@ class ShopMode:
         background_path = os.path.join(BASE_DIR, "resource", "Image", "GUI", "clearEmptyImage.png")
         self.background = load_image(background_path)
         self.font = load_font("ENCR10B.TTF", 30)
+        bgm_manager.play_select_bgm()
 
         item_dir = os.path.join(BASE_DIR, "resource", "Image", "GUI", "Item")
         self.coin_image = load_image(os.path.join(item_dir, "bar_coin.png"))
@@ -56,6 +58,7 @@ class ShopMode:
             return play_mode.zag
 
         play_mode.zag = Zag()
+        play_mode._load_player_state()
         return play_mode.zag
 
     def handle_events(self):
@@ -94,6 +97,7 @@ class ShopMode:
         if self.player.gold >= cost:
             self.player.gold -= cost
             setattr(self.player, attr, getattr(self.player, attr) + 1)
+            play_mode._save_player_state()
 
     def update(self):
         pass
@@ -130,6 +134,7 @@ class ShopMode:
         pass
 
     def finish(self):
+        play_mode._save_player_state()
         self.background = None
         self.font = None
         self.player = None

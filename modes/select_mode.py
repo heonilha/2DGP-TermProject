@@ -5,6 +5,7 @@ from modes import play_mode
 from stage_icon import StageIcon
 from ui_icon import ShopIcon
 import os
+import bgm_manager
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
@@ -19,22 +20,19 @@ def init():
     # 배경 이미지 로드
     background_path = os.path.join(BASE_DIR, 'resource','Image','GUI','clearEmptyImage.png')
     background = load_image(background_path)
+    bgm_manager.play_select_bgm()
     icon1_path=os.path.join(BASE_DIR, 'resource','Image','GUI','Stage','Icon','b1-1.png')
     icon2_path=os.path.join(BASE_DIR, 'resource','Image','GUI','Stage','Icon','b2-1.png')
-    icon3_path=os.path.join(BASE_DIR, 'resource','Image','GUI','Stage','Icon','b3-1.png')
-    icon4_path=os.path.join(BASE_DIR, 'resource','Image','GUI','Stage','Icon','b4-1.png')
-    icon5_path=os.path.join(BASE_DIR, 'resource','Image','GUI','Stage','Icon','b5-1.png')
     shop_icon_path=os.path.join(BASE_DIR, 'resource','Image','GUI','shop.png')
 
     # 스테이지 아이콘 객체 생성
+    center_x, center_y = get_canvas_width() // 2, get_canvas_height() // 2
+    offset_x = 150
+
     stage_icons = [
-        StageIcon(200, 300, icon1_path, play_mode, stage_id=1),
-        StageIcon(400, 300, icon2_path, play_mode, stage_id=2),
-        # 추가 아이콘은 이후 스테이지 정의가 준비되면 연결
-        StageIcon(600, 300, icon3_path, play_mode, stage_id=None),
-        StageIcon(800, 300, icon4_path, play_mode, stage_id=None),
-        StageIcon(1000, 300, icon5_path, play_mode, stage_id=None),
-        ShopIcon(1100, 150, shop_icon_path)
+        StageIcon(center_x - offset_x, center_y, icon1_path, play_mode, stage_id=1),
+        StageIcon(center_x + offset_x, center_y, icon2_path, play_mode, stage_id=2),
+        ShopIcon(center_x, center_y - 200, shop_icon_path)
     ]
 
 

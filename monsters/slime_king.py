@@ -1,7 +1,7 @@
 import os
 import random
 
-from pico2d import load_image
+from pico2d import get_canvas_height, get_canvas_width, load_image
 
 import game_framework
 import game_world
@@ -20,7 +20,7 @@ from game_object import GameObject
 FRAME_W = 32
 FRAME_H = 41
 SCALE = 6  # 기존 대비 2배 확장해 거대한 보스 느낌을 줌
-COLLISION_SCALE = 0.85  # 스프라이트 대비 약간 줄인 히트박스
+COLLISION_SCALE = 0.8  # 스프라이트 대비 더 축소한 히트박스
 
 IDLE_FRAMES = [1, 2, 3]  # Idle/Hop 에서 사용할 프레임 인덱스
 IDLE_ANIM_SPEED = 0.14
@@ -42,6 +42,8 @@ HOP_PREPARE_TIME = 0.5
 JUMP_ATTACK_COOLTIME = 4.0
 JUMP_ATTACK_PROB = 0.2
 JUMP_ATTACK_PROB_ENRAGE = 0.35
+JUMP_ATTACK_MIN_RANGE = 220.0
+JUMP_ATTACK_MAX_RANGE = 520.0
 JUMP_PREPARE_DURATION = 1.0
 JUMP_INITIAL_VELOCITY = 480.0
 GRAVITY = -950.0
@@ -61,9 +63,9 @@ class SlimeKing(GameObject):
         if not (os.path.exists(idle_path) and os.path.exists(attack_path) and os.path.exists(back_path)):
             raise FileNotFoundError("SlimeKing sprite resources are missing")
 
-        start_x = random.randint(150, 1050)
+        start_x = random.randint(150, max(160, get_canvas_width() - 150))
         # 플레이어가 위로 올라가야 하는 보스 위치를 강조하기 위해 시작 y 값을 높임
-        start_y = random.randint(400, 900)
+        start_y = random.randint(int(get_canvas_height() * 1.3), get_canvas_height() * 2 - 220)
 
         self.transform = self.add_component(TransformComponent(start_x, start_y, FRAME_W * SCALE, FRAME_H * SCALE))
         self.sprite = self.add_component(SpriteComponent(load_image(idle_path), FRAME_W, FRAME_H))
@@ -255,7 +257,7 @@ class SlimeKing(GameObject):
         if self.attack_state != "none" or self.hopping or self.preparing or self.jump_attack_state != "none":
             return BehaviorTree.FAIL
 
-        if self.perception.is_in_range(160.0) and self.attack_cooltime_timer >= ATTACK_COOLTIME:
+        if self.perception.is_in_range(360.0) and self.attack_cooltime_timer >= ATTACK_COOLTIME:
             return BehaviorTree.SUCCESS
         return BehaviorTree.FAIL
 
@@ -335,6 +337,18 @@ class SlimeKing(GameObject):
         if self.jump_attack_timer < self.jump_attack_cooltime:
             return BehaviorTree.FAIL
 
+        target = self.perception.target
+        if not target:
+            return BehaviorTree.FAIL
+
+        distance_sq = self.perception.distance_sq_to_target()
+        if not (
+            JUMP_ATTACK_MIN_RANGE * JUMP_ATTACK_MIN_RANGE
+            <= distance_sq
+            <= JUMP_ATTACK_MAX_RANGE * JUMP_ATTACK_MAX_RANGE
+        ):
+            return BehaviorTree.FAIL
+
         prob = JUMP_ATTACK_PROB
         if self.hp <= self.combat.max_hp * 0.5:
             prob = JUMP_ATTACK_PROB_ENRAGE
@@ -372,6 +386,26 @@ class SlimeKing(GameObject):
         dt = game_framework.frame_time
 
         if self.jump_attack_state == "prepare":
+            target = self.perception.target
+            if target:
+                distance_sq = self.perception.distance_sq_to_target()
+                if not (
+                    JUMP_ATTACK_MIN_RANGE * JUMP_ATTACK_MIN_RANGE
+                    <= distance_sq
+                    <= JUMP_ATTACK_MAX_RANGE * JUMP_ATTACK_MAX_RANGE
+                ):
+                    self.jump_attack_state = "none"
+                    self.jump_attack_timer = 0.0
+                    self.collision.mask = self.default_collision_mask
+                    self._set_animation(self.idle_image, IDLE_FRAMES)
+                    self.frame = self.frame_indices[self.frame_index]
+                    return BehaviorTree.SUCCESS
+
+                self.jump_target_x = target.x
+                self.jump_target_y = target.y
+                self.dir = -1 if target.x < self.x else 1
+                self._update_sprite_flip()
+
             self.jump_prepare_timer += dt
             if self.jump_prepare_timer >= JUMP_PREPARE_DURATION:
                 self.jump_attack_state = "air"
@@ -459,3 +493,28 @@ class SlimeKing(GameObject):
                     combat.take_damage(LANDING_DAMAGE)
                 else:
                     combat.take_damage(ATTACK_DAMAGE)
+
+    def _enter_hit(self, attacker=None):
+        if self.hp <= 0:
+            return
+
+        if self.movement.is_path_active():
+            self.movement.type = MovementType.DIRECTIONAL
+
+        self.attack_state = "none"
+        self.attack_dash_started = False
+        self.preparing = False
+        self.hopping = False
+
+        if self.jump_attack_state != "none":
+            self.jump_attack_state = "none"
+            self.collision.mask = self.default_collision_mask
+            self.jump_attack_timer = 0.0
+
+        self._set_animation(self.idle_image, IDLE_FRAMES)
+        self.frame = self.frame_indices[self.frame_index]
+        self.y_base = self.y
+
+        if attacker and hasattr(attacker, "transform"):
+            knock_dir = 1 if attacker.transform.x < self.x else -1
+            self.x += knock_dir * 10

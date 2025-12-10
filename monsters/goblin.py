@@ -2,7 +2,7 @@ import math
 import os
 import random
 
-from pico2d import load_image, get_canvas_width
+from pico2d import load_image, get_canvas_height, get_canvas_width
 
 import game_framework
 import game_world
@@ -45,8 +45,10 @@ class Goblin(GameObject):
         if not os.path.exists(image_path):
             raise FileNotFoundError(f"Image not found: `{image_path}`")
 
-        start_x = random.randint(120, max(130, get_canvas_width() - 120))
-        start_y = random.randint(120, 400)
+        start_x = random.randint(140, max(150, get_canvas_width() - 140))
+        start_y_lower = 140
+        start_y_upper = max(start_y_lower + 1, get_canvas_height() - start_y_lower)
+        start_y = random.randint(start_y_lower, start_y_upper)
 
         self.transform = self.add_component(
             TransformComponent(start_x, start_y, FRAME_W * SCALE, FRAME_H * SCALE)
@@ -295,3 +297,21 @@ class Goblin(GameObject):
                 if combat:
                     combat.take_damage(ATTACK_DAMAGE)
                 self.attack_hit_registered = True
+
+    def _enter_hit(self, attacker=None):
+        if self.state == "dead":
+            return
+
+        if self.movement.is_path_active():
+            self.movement.type = MovementType.DIRECTIONAL
+
+        self.state = "patrol"
+        self.prepare_timer = 0.0
+        self.attack_anim_timer = 0.0
+        self.cooldown_timer = 0.0
+        self.attack_hit_registered = False
+        self.frame = 0
+
+        if attacker and hasattr(attacker, "transform"):
+            knock_dir = 1 if attacker.transform.x < self.x else -1
+            self.x += knock_dir * 12

@@ -10,7 +10,7 @@ from collision_manager import CollisionGroup
 from components.component_combat import CombatComponent
 from components.component_collision import CollisionComponent
 from components.component_hud import HUDComponent
-from components.component_move import MovementComponent
+from components.component_move import MovementComponent, MovementType
 from components.component_perception import PerceptionComponent
 from components.component_render import RenderComponent
 from components.component_transform import TransformComponent
@@ -72,7 +72,9 @@ class GoblinArcher(GameObject):
             raise FileNotFoundError(f"Image not found: `{image_path}`")
 
         start_x = random.randint(140, max(150, get_canvas_width() - 140))
-        start_y = random.randint(140, 420)
+        start_y_lower = 160
+        start_y_upper = max(start_y_lower + 1, get_canvas_height() - start_y_lower)
+        start_y = random.randint(start_y_lower, start_y_upper)
 
         self.transform = self.add_component(
             TransformComponent(start_x, start_y, FRAME_W * SCALE, FRAME_H * SCALE)
@@ -288,5 +290,25 @@ class GoblinArcher(GameObject):
 
     def handle_collision(self, other):
         if getattr(other, "collision_group", None) == CollisionGroup.PROJECTILE:
-            self.state = "patrol"
-            self.frame = 0
+            self._enter_hit(other)
+        elif getattr(other, "collision_group", None) == CollisionGroup.PLAYER:
+            combat = getattr(other, "combat", None)
+            if combat:
+                combat.take_damage(8)
+
+    def _enter_hit(self, attacker=None):
+        if self.state == "dead":
+            return
+
+        if self.movement.is_path_active():
+            self.movement.type = MovementType.DIRECTIONAL
+
+        self.state = "patrol"
+        self.prepare_timer = 0.0
+        self.attack_anim_timer = 0.0
+        self.cooldown_timer = 0.0
+        self.frame = 0
+
+        if attacker and hasattr(attacker, "transform"):
+            knock_dir = 1 if attacker.transform.x < self.x else -1
+            self.x += knock_dir * 10

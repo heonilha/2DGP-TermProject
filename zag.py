@@ -83,6 +83,8 @@ class Die:
         self.death_timer = 2.0  # 2초 후 타이틀 화면으로 이동
         defeat_path = os.path.join(BASE_DIR, 'resource', 'Image', 'GUI', 'defeat.png')
         self.defeat_image = load_image(defeat_path)
+        defeat_background_path = os.path.join(BASE_DIR, 'resource', 'Image', 'GUI', 'clearEmptyImage.png')
+        self.defeat_background = load_image(defeat_background_path)
     def enter(self,e):
         print("Zag is Dead")
         self.zag.invincibleTimer = 0.0
@@ -98,8 +100,14 @@ class Die:
             game_framework.change_mode(title_mode)
         self.death_timer -= game_framework.frame_time
     def draw(self):
-
         if self.death_timer > 0.5:  # 0.5초 정도 남을 때까지 DEFEAT 표시
+            if self.defeat_background:
+                self.defeat_background.draw(
+                    get_canvas_width() // 2,
+                    get_canvas_height() // 2,
+                    get_canvas_width() * 2,
+                    get_canvas_height() * 2,
+                )
             self.defeat_image.draw(get_canvas_width() // 2, get_canvas_height() // 2)
 
 class Idle:
