@@ -64,8 +64,11 @@ class ExplosionEffect(GameObject):
         self.timer = 0.0
         self.index = 0
 
-        width = images[0].w // 2
-        height = images[0].h // 2
+        max_w = max(img.w for img in images)
+        max_h = max(img.h for img in images)
+
+        width = max_w
+        height = max_h
         self.transform = self.add_component(TransformComponent(x, y, width, height))
         self.sprite = self.add_component(SpriteComponent(images[0], images[0].w, images[0].h))
 
@@ -79,6 +82,8 @@ class ExplosionEffect(GameObject):
                 game_world.remove_object(self)
                 return
             self.sprite.image = self.images[self.index]
+            self.sprite.frame_w = self.sprite.image.w
+            self.sprite.frame_h = self.sprite.image.h
 
         super().update()
 
@@ -140,6 +145,17 @@ class BombProjectile(GameObject):
         self.vy += BOMB_FLIGHT_GRAVITY * dt
         self.transform.x += self.vx * dt
         self.transform.y += self.vy * dt
+
+        cw = get_canvas_width()
+        ch = get_canvas_height()
+        if (
+            self.transform.x < -self.transform.w
+            or self.transform.x > cw + self.transform.w
+            or self.transform.y < -self.transform.h
+            or self.transform.y > ch + self.transform.h
+        ):
+            game_world.remove_object(self)
+            return
 
         if self.transform.y <= BOMB_MIN_HEIGHT or self.lifetime >= BOMB_LIFETIME:
             self.explode()
@@ -206,12 +222,12 @@ class MissileProjectile(GameObject):
         self.transform.y += self.vy * MISSILE_SPEED * dt
 
         cw = get_canvas_width()
-        ch = get_canvas_height() * 2
+        ch = get_canvas_height()
         if (
-            self.transform.x < 0
-            or self.transform.x > cw
-            or self.transform.y < 0
-            or self.transform.y > ch
+            self.transform.x < -self.transform.w
+            or self.transform.x > cw + self.transform.w
+            or self.transform.y < -self.transform.h
+            or self.transform.y > ch + self.transform.h
         ):
             game_world.remove_object(self)
             return
