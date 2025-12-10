@@ -2,6 +2,7 @@ from pico2d import *
 import os
 import game_framework
 from modes import select_mode
+import bgm_manager
 image = None
 
 def init():
@@ -11,6 +12,7 @@ def init():
     if not os.path.exists(image_path):
         raise FileNotFoundError(f"Image not found: `{image_path}`")
     image = load_image(image_path)
+    bgm_manager.play_title_bgm()
 def finish():
     global image
     del image

@@ -4,6 +4,7 @@ from sdl2 import SDL_BUTTON_LEFT, SDL_KEYDOWN, SDL_MOUSEBUTTONDOWN, SDL_QUIT, SD
 
 import game_framework
 import game_world
+import bgm_manager
 from modes import play_mode
 from zag import Zag
 
@@ -25,6 +26,7 @@ class ShopMode:
         background_path = os.path.join(BASE_DIR, "resource", "Image", "GUI", "clearEmptyImage.png")
         self.background = load_image(background_path)
         self.font = load_font("ENCR10B.TTF", 30)
+        bgm_manager.play_select_bgm()
 
         item_dir = os.path.join(BASE_DIR, "resource", "Image", "GUI", "Item")
         self.coin_image = load_image(os.path.join(item_dir, "bar_coin.png"))
