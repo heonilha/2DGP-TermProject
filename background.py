@@ -2,13 +2,14 @@ import os
 import game_world
 from pico2d import *
 
+from common import resource_path
+
 
 class Background:
     _cache = {}
 
     def __init__(self, filename="bg1.png"):
-        base_dir = os.path.dirname(__file__)
-        image_path = os.path.join(base_dir, 'resource', 'Image', 'GUI', 'Stage', 'BackGround', filename)
+        image_path = resource_path(f'resource/Image/GUI/Stage/BackGround/{filename}')
         if filename not in Background._cache:
             Background._cache[filename] = load_image(image_path)
         self.image = Background._cache[filename]

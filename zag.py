@@ -1,7 +1,7 @@
 from pico2d import *
 from sdl2 import SDL_KEYDOWN, SDLK_z, SDLK_SPACE, SDLK_RIGHT, SDLK_LEFT, SDLK_UP, SDLK_DOWN
 
-import os
+from common import resource_path
 import game_framework
 import game_world
 from state_machine import StateMachine
@@ -37,8 +37,6 @@ def event_attack(e):
 def event_timeout(e):
     # 'TIME_OUT' 이벤트 (타이머가 다 되었을 때)
     return e[0] == 'TIME_OUT'
-
-BASE_DIR = os.path.dirname(__file__)
 
 PIXEL_PER_METER = (10.0 / 0.5)  # 10 pixel 50 cm
 RUN_SPEED_KMPH = 30.0  # Km / Hour
@@ -81,9 +79,8 @@ class Die:
     def __init__(self, zag):
         self.zag = zag
         self.death_timer = 2.0  # 2초 후 타이틀 화면으로 이동
-        defeat_path = os.path.join(BASE_DIR, 'resource', 'Image', 'GUI', 'defeat.png')
-        self.defeat_image = load_image(defeat_path)
-        defeat_background_path = os.path.join(BASE_DIR, 'resource', 'Image', 'GUI', 'clearEmptyImage.png')
+        self.defeat_image = load_image(resource_path('resource/Image/GUI/defeat.png'))
+        defeat_background_path = resource_path('resource/Image/GUI/clearEmptyImage.png')
         self.defeat_background = load_image(defeat_background_path)
     def enter(self,e):
         print("Zag is Dead")
@@ -149,11 +146,11 @@ class Zag(GameObject):
         super().__init__()
 
         self.transform = self.add_component(TransformComponent(400, 300, 48, 64))
-        image_path = os.path.join(BASE_DIR, 'resource', 'Image', 'Character', 'ZAG_ani.png')
+        image_path = resource_path('resource/Image/Character/ZAG_ani.png')
         self.sprite = self.add_component(SpriteComponent(load_image(image_path), 32, 64))
-        attack_dir = os.path.join(BASE_DIR, 'resource', 'Image', 'Character', 'Attack')
+        attack_dir = 'resource/Image/Character/Attack'
         self.attack_images = [
-            load_image(os.path.join(attack_dir, f'Attack{i}.png')) for i in range(1, 8)
+            load_image(resource_path(f'{attack_dir}/Attack{i}.png')) for i in range(1, 8)
         ]
         self.movement = self.add_component(MovementComponent(RUN_SPEED_PPS))
         self.combat = self.add_component(CombatComponent(100, invincible_duration=1.0, enable_invincibility=True))

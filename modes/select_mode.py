@@ -1,13 +1,11 @@
 from pico2d import *
 import game_framework
 
+from common import resource_path
 from modes import play_mode
 from stage_icon import StageIcon
 from ui_icon import ShopIcon
-import os
 import bgm_manager
-
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 # 3. 이 모드에서 사용할 객체 리스트
 stage_icons = []
@@ -18,12 +16,12 @@ def init():
     global background, stage_icons
 
     # 배경 이미지 로드
-    background_path = os.path.join(BASE_DIR, 'resource','Image','GUI','clearEmptyImage.png')
+    background_path = resource_path('resource/Image/GUI/clearEmptyImage.png')
     background = load_image(background_path)
     bgm_manager.play_select_bgm()
-    icon1_path=os.path.join(BASE_DIR, 'resource','Image','GUI','Stage','Icon','b1-1.png')
-    icon2_path=os.path.join(BASE_DIR, 'resource','Image','GUI','Stage','Icon','b2-1.png')
-    shop_icon_path=os.path.join(BASE_DIR, 'resource','Image','GUI','shop.png')
+    icon1_path=resource_path('resource/Image/GUI/Stage/Icon/b1-1.png')
+    icon2_path=resource_path('resource/Image/GUI/Stage/Icon/b2-1.png')
+    shop_icon_path=resource_path('resource/Image/GUI/shop.png')
 
     # 스테이지 아이콘 객체 생성
     center_x, center_y = get_canvas_width() // 2, get_canvas_height() // 2

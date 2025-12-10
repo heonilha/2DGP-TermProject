@@ -4,6 +4,7 @@ import random
 
 from pico2d import get_canvas_width, get_canvas_height, load_image
 
+from common import resource_path
 import game_framework
 import game_world
 from collision_manager import CollisionGroup
@@ -59,20 +60,19 @@ SCALE = 2
 class GoblinKing(GameObject):
     def __init__(self):
         super().__init__()
-        base_dir = os.path.dirname(os.path.dirname(__file__))
-        img_dir = os.path.join(base_dir, "resource", "Image", "Monster")
+        img_dir = "resource/Image/Monster"
 
-        idle_path = os.path.join(img_dir, "GoblinKingIdle.png")
-        hit_path = os.path.join(img_dir, "Goblin KingHit.png")
-        bomb_path = os.path.join(img_dir, "GoblinKing Bomb.png")
-        gun_path = os.path.join(img_dir, "GoblinKing Att.png")
-        back_path = os.path.join(img_dir, "GoblinKing BackRun.png")
-        bomb_proj_path = os.path.join(img_dir, "bomb.png")
-        missile_path = os.path.join(img_dir, "GoblinKingMissile.png")
+        idle_path = resource_path(f"{img_dir}/GoblinKingIdle.png")
+        hit_path = resource_path(f"{img_dir}/Goblin KingHit.png")
+        bomb_path = resource_path(f"{img_dir}/GoblinKing Bomb.png")
+        gun_path = resource_path(f"{img_dir}/GoblinKing Att.png")
+        back_path = resource_path(f"{img_dir}/GoblinKing BackRun.png")
+        bomb_proj_path = resource_path(f"{img_dir}/bomb.png")
+        missile_path = resource_path(f"{img_dir}/GoblinKingMissile.png")
         explosion_paths = [
-            os.path.join(img_dir, "hit_4x4_1.png"),
-            os.path.join(img_dir, "hit_4x4_2.png"),
-            os.path.join(img_dir, "hit_4x4_3.png"),
+            resource_path(f"{img_dir}/hit_4x4_1.png"),
+            resource_path(f"{img_dir}/hit_4x4_2.png"),
+            resource_path(f"{img_dir}/hit_4x4_3.png"),
         ]
 
         if not all(os.path.exists(p) for p in [

@@ -1,7 +1,7 @@
 import os
 from pico2d import load_music
 
-BGM_DIR = os.path.join(os.path.dirname(__file__), "bgm")
+from common import resource_path
 
 _current_music = None
 _music_cache = {}
@@ -10,7 +10,7 @@ _music_cache = {}
 def _get_music(track_name: str):
     global _music_cache
     if track_name not in _music_cache:
-        music_path = os.path.join(BGM_DIR, f"{track_name}.mp3")
+        music_path = resource_path(f"bgm/{track_name}.mp3")
         if not os.path.exists(music_path):
             raise FileNotFoundError(f"BGM file not found: `{music_path}`")
         _music_cache[track_name] = load_music(music_path)

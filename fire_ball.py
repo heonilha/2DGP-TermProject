@@ -1,11 +1,9 @@
-import os
-
 from pico2d import load_image
 
+from common import resource_path
 from projectile import Projectile
 
-base_dir = os.path.dirname(__file__)
-image_path = os.path.join(base_dir, 'resource', 'Image', 'Character', 'Fire', 'Fire01_1.png')
+image_path = resource_path('resource/Image/Character/Fire/Fire01_1.png')
 
 
 class FireBall(Projectile):

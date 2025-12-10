@@ -3,6 +3,7 @@ import random
 
 from pico2d import get_canvas_height, get_canvas_width, load_image
 
+from common import resource_path
 import game_framework
 import game_world
 from behavior_tree import Action, BehaviorTree, Condition, Selector, Sequence
@@ -41,8 +42,7 @@ class Arrow(Projectile):
 
     def __init__(self, x, y, direction):
         if Arrow._arrow_image is None:
-            base_dir = os.path.dirname(os.path.dirname(__file__))
-            image_path = os.path.join(base_dir, "resource", "Image", "Projectile", "arrow.png")
+            image_path = resource_path("resource/Image/Projectile/arrow.png")
             if not os.path.exists(image_path):
                 raise FileNotFoundError(f"Arrow image not found: `{image_path}`")
             Arrow._arrow_image = load_image(image_path)
@@ -66,8 +66,7 @@ class GoblinArcher(GameObject):
     def __init__(self):
         super().__init__()
 
-        base_dir = os.path.dirname(os.path.dirname(__file__))
-        image_path = os.path.join(base_dir, "resource", "Image", "Monster", "Goblin Archer.png")
+        image_path = resource_path("resource/Image/Monster/Goblin Archer.png")
         if not os.path.exists(image_path):
             raise FileNotFoundError(f"Image not found: `{image_path}`")
 

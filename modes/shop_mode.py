@@ -1,15 +1,12 @@
-import os
 from pico2d import clear_canvas, get_canvas_height, get_canvas_width, get_events, load_font, load_image, update_canvas
 from sdl2 import SDL_BUTTON_LEFT, SDL_KEYDOWN, SDL_MOUSEBUTTONDOWN, SDL_QUIT, SDLK_ESCAPE
 
+from common import resource_path
 import game_framework
 import game_world
 import bgm_manager
 from modes import play_mode
 from zag import Zag
-
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-
 
 class ShopMode:
     def __init__(self):
@@ -23,15 +20,15 @@ class ShopMode:
 
     def init(self):
         self.player = self._get_or_create_player()
-        background_path = os.path.join(BASE_DIR, "resource", "Image", "GUI", "clearEmptyImage.png")
+        background_path = resource_path("resource/Image/GUI/clearEmptyImage.png")
         self.background = load_image(background_path)
-        self.font = load_font("ENCR10B.TTF", 30)
+        self.font = load_font(resource_path("ENCR10B.TTF"), 30)
         bgm_manager.play_select_bgm()
 
-        item_dir = os.path.join(BASE_DIR, "resource", "Image", "GUI", "Item")
-        self.coin_image = load_image(os.path.join(item_dir, "bar_coin.png"))
-        self.hp_image = load_image(os.path.join(item_dir, "hp_potion.png"))
-        self.mp_image = load_image(os.path.join(item_dir, "mp_potion.png"))
+        item_dir = "resource/Image/GUI/Item"
+        self.coin_image = load_image(resource_path(f"{item_dir}/bar_coin.png"))
+        self.hp_image = load_image(resource_path(f"{item_dir}/hp_potion.png"))
+        self.mp_image = load_image(resource_path(f"{item_dir}/mp_potion.png"))
 
         self.shop_items = [
             {
