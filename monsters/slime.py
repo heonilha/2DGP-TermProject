@@ -13,7 +13,6 @@ from components.component_collision import CollisionComponent
 from components.component_hud import HUDComponent
 from components.component_move import MovementComponent, MovementType
 from components.component_perception import PerceptionComponent
-from components.component_projectile import ProjectileComponent
 from components.component_sprite import SpriteComponent
 from components.component_transform import TransformComponent
 from game_object import GameObject
@@ -289,9 +288,7 @@ class Slime(GameObject):
 
     def handle_collision(self, other):
         if getattr(other, "collision_group", None) == CollisionGroup.PROJECTILE:
-            projectile_comp = other.get(ProjectileComponent)
-            if projectile_comp:
-                projectile_comp.on_hit(self)
+            self._enter_hit(other)
         elif getattr(other, "collision_group", None) == CollisionGroup.PLAYER:
             combat = getattr(other, "combat", None)
             if combat:
