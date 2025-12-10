@@ -150,11 +150,12 @@ class BombProjectile(GameObject):
 
         cw = get_canvas_width()
         ch = get_canvas_height()
+        world_h = ch * 2
         if (
             self.transform.x < -self.transform.w
             or self.transform.x > cw + self.transform.w
             or self.transform.y < -self.transform.h
-            or self.transform.y > ch + self.transform.h
+            or self.transform.y > world_h + self.transform.h
         ):
             game_world.remove_object(self)
             return
@@ -225,11 +226,12 @@ class MissileProjectile(GameObject):
 
         cw = get_canvas_width()
         ch = get_canvas_height()
+        world_h = ch * 2
         if (
             self.transform.x < -self.transform.w
             or self.transform.x > cw + self.transform.w
             or self.transform.y < -self.transform.h
-            or self.transform.y > ch + self.transform.h
+            or self.transform.y > world_h + self.transform.h
         ):
             game_world.remove_object(self)
             return
