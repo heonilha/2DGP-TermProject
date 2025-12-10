@@ -42,9 +42,9 @@ MISSILE_SPEED = 420.0
 BACKRUN_FRAME_W = 45
 BACKRUN_FRAME_H = 50
 BACKRUN_FRAME_COUNT = 5
-BACKRUN_SPEED = 220.0
-BACKRUN_DURATION = 2
-BACKRUN_JUMP_VY = 180.0
+BACKRUN_SPEED = 180.0
+BACKRUN_DURATION = 1.1
+BACKRUN_JUMP_VY = 150.0
 
 HIGH_ALTITUDE_RATIO = 1.8
 
@@ -329,7 +329,8 @@ class GoblinKing(GameObject):
         self._set_animation(self.back_image, BACKRUN_FRAME_W, BACKRUN_FRAME_H)
         self.backrun_timer = 0.0
         self.vertical_velocity = BACKRUN_JUMP_VY
-        self.movement.xdir = -self.dir
+        canvas_mid_x = get_canvas_width() * 0.5
+        self.movement.xdir = 1 if self.transform.x < canvas_mid_x else -1
         self.movement.speed = BACKRUN_SPEED
 
     def _update_backrun(self, zag):
