@@ -241,7 +241,14 @@ class BombProjectile(Projectile):
                 return
 
         if self.transform.y <= 0 or self.lifetime >= self.max_lifetime:
-            self._explode(target)
+            if target and hasattr(target, "transform"):
+                dx = target.transform.x - self.transform.x
+                dy = target.transform.y - self.transform.y
+                if dx * dx + dy * dy <= self.detonate_distance_sq:
+                    self._explode(target)
+                    return
+
+            self._explode()
             return
 
         super().update()
