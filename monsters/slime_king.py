@@ -42,6 +42,8 @@ HOP_PREPARE_TIME = 0.5
 JUMP_ATTACK_COOLTIME = 4.0
 JUMP_ATTACK_PROB = 0.2
 JUMP_ATTACK_PROB_ENRAGE = 0.35
+JUMP_ATTACK_MIN_RANGE = 220.0
+JUMP_ATTACK_MAX_RANGE = 520.0
 JUMP_PREPARE_DURATION = 1.0
 JUMP_INITIAL_VELOCITY = 480.0
 GRAVITY = -950.0
@@ -335,6 +337,18 @@ class SlimeKing(GameObject):
         if self.jump_attack_timer < self.jump_attack_cooltime:
             return BehaviorTree.FAIL
 
+        target = self.perception.target
+        if not target:
+            return BehaviorTree.FAIL
+
+        distance_sq = self.perception.distance_sq_to_target()
+        if not (
+            JUMP_ATTACK_MIN_RANGE * JUMP_ATTACK_MIN_RANGE
+            <= distance_sq
+            <= JUMP_ATTACK_MAX_RANGE * JUMP_ATTACK_MAX_RANGE
+        ):
+            return BehaviorTree.FAIL
+
         prob = JUMP_ATTACK_PROB
         if self.hp <= self.combat.max_hp * 0.5:
             prob = JUMP_ATTACK_PROB_ENRAGE
@@ -372,6 +386,26 @@ class SlimeKing(GameObject):
         dt = game_framework.frame_time
 
         if self.jump_attack_state == "prepare":
+            target = self.perception.target
+            if target:
+                distance_sq = self.perception.distance_sq_to_target()
+                if not (
+                    JUMP_ATTACK_MIN_RANGE * JUMP_ATTACK_MIN_RANGE
+                    <= distance_sq
+                    <= JUMP_ATTACK_MAX_RANGE * JUMP_ATTACK_MAX_RANGE
+                ):
+                    self.jump_attack_state = "none"
+                    self.jump_attack_timer = 0.0
+                    self.collision.mask = self.default_collision_mask
+                    self._set_animation(self.idle_image, IDLE_FRAMES)
+                    self.frame = self.frame_indices[self.frame_index]
+                    return BehaviorTree.SUCCESS
+
+                self.jump_target_x = target.x
+                self.jump_target_y = target.y
+                self.dir = -1 if target.x < self.x else 1
+                self._update_sprite_flip()
+
             self.jump_prepare_timer += dt
             if self.jump_prepare_timer >= JUMP_PREPARE_DURATION:
                 self.jump_attack_state = "air"
@@ -459,3 +493,28 @@ class SlimeKing(GameObject):
                     combat.take_damage(LANDING_DAMAGE)
                 else:
                     combat.take_damage(ATTACK_DAMAGE)
+
+    def _enter_hit(self, attacker=None):
+        if self.hp <= 0:
+            return
+
+        if self.movement.is_path_active():
+            self.movement.type = MovementType.DIRECTIONAL
+
+        self.attack_state = "none"
+        self.attack_dash_started = False
+        self.preparing = False
+        self.hopping = False
+
+        if self.jump_attack_state != "none":
+            self.jump_attack_state = "none"
+            self.collision.mask = self.default_collision_mask
+            self.jump_attack_timer = 0.0
+
+        self._set_animation(self.idle_image, IDLE_FRAMES)
+        self.frame = self.frame_indices[self.frame_index]
+        self.y_base = self.y
+
+        if attacker and hasattr(attacker, "transform"):
+            knock_dir = 1 if attacker.transform.x < self.x else -1
+            self.x += knock_dir * 10

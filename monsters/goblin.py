@@ -295,3 +295,21 @@ class Goblin(GameObject):
                 if combat:
                     combat.take_damage(ATTACK_DAMAGE)
                 self.attack_hit_registered = True
+
+    def _enter_hit(self, attacker=None):
+        if self.state == "dead":
+            return
+
+        if self.movement.is_path_active():
+            self.movement.type = MovementType.DIRECTIONAL
+
+        self.state = "patrol"
+        self.prepare_timer = 0.0
+        self.attack_anim_timer = 0.0
+        self.cooldown_timer = 0.0
+        self.attack_hit_registered = False
+        self.frame = 0
+
+        if attacker and hasattr(attacker, "transform"):
+            knock_dir = 1 if attacker.transform.x < self.x else -1
+            self.x += knock_dir * 12

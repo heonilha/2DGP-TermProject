@@ -307,3 +307,24 @@ class Slime(GameObject):
             combat = getattr(other, "combat", None)
             if combat:
                 combat.take_damage(10)
+
+    def _enter_hit(self, attacker=None):
+        if self.dead:
+            return
+
+        if self.movement.is_path_active():
+            self.movement.type = MovementType.DIRECTIONAL
+
+        self.preparing = False
+        self.hopping = False
+
+        self.attack_state = 'none'
+        self.attack_dash_started = False
+        self.attack_timer = 0.0
+        self.hold_timer = 0.0
+        self.attack_cooltime_timer = 0.0
+        self.frame = JUMP_LAND_FRAME
+
+        if attacker and hasattr(attacker, "transform"):
+            knock_dir = 1 if attacker.transform.x < self.x else -1
+            self.x += knock_dir * 8
