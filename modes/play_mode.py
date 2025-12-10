@@ -70,12 +70,11 @@ def init():
     game_world.camera = camera.Camera(1600,900)
 
     global zag
-    if zag is None:
-        zag = Zag()
-
-    already_added = any(zag in layer for layer in game_world.world)
-    if not already_added:
-        game_world.add_object(zag, 1)
+    # 플레이어가 패배 후 제목 화면으로 돌아갔다 다시 시작할 때
+    # 남아 있던 상태(HP 0 등) 때문에 즉시 패배 화면이 뜨는 문제를 방지합니다.
+    # 매ステ이지 시작 시 새 플레이어 객체를 생성해 완전히 초기화합니다.
+    zag = Zag()
+    game_world.add_object(zag, 1)
     _spawn_stage_monsters()
 
     global background
