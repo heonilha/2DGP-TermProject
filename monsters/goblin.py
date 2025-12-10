@@ -2,7 +2,7 @@ import math
 import os
 import random
 
-from pico2d import load_image, get_canvas_width
+from pico2d import load_image, get_canvas_height, get_canvas_width
 
 import game_framework
 import game_world
@@ -45,8 +45,8 @@ class Goblin(GameObject):
         if not os.path.exists(image_path):
             raise FileNotFoundError(f"Image not found: `{image_path}`")
 
-        start_x = random.randint(120, max(130, get_canvas_width() - 120))
-        start_y = random.randint(120, 400)
+        start_x = random.randint(140, max(150, get_canvas_width() - 140))
+        start_y = random.randint(140, get_canvas_height() * 2 - 140)
 
         self.transform = self.add_component(
             TransformComponent(start_x, start_y, FRAME_W * SCALE, FRAME_H * SCALE)

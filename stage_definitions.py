@@ -19,13 +19,6 @@ STAGES = {
             {"type": "GoblinKing", "count": 1},
         ],
     },
-    3: {
-        "id": 3,
-        "background": "bg2.png",
-        "monsters": [
-            {"type": "SlimeKing", "count": 1},
-        ],
-    },
 }
 
 

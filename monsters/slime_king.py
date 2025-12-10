@@ -1,7 +1,7 @@
 import os
 import random
 
-from pico2d import load_image
+from pico2d import get_canvas_height, get_canvas_width, load_image
 
 import game_framework
 import game_world
@@ -61,9 +61,9 @@ class SlimeKing(GameObject):
         if not (os.path.exists(idle_path) and os.path.exists(attack_path) and os.path.exists(back_path)):
             raise FileNotFoundError("SlimeKing sprite resources are missing")
 
-        start_x = random.randint(150, 1050)
+        start_x = random.randint(150, max(160, get_canvas_width() - 150))
         # 플레이어가 위로 올라가야 하는 보스 위치를 강조하기 위해 시작 y 값을 높임
-        start_y = random.randint(400, 900)
+        start_y = random.randint(int(get_canvas_height() * 1.3), get_canvas_height() * 2 - 220)
 
         self.transform = self.add_component(TransformComponent(start_x, start_y, FRAME_W * SCALE, FRAME_H * SCALE))
         self.sprite = self.add_component(SpriteComponent(load_image(idle_path), FRAME_W, FRAME_H))
