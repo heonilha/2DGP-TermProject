@@ -12,10 +12,10 @@ from components.component_collision import CollisionComponent
 from components.component_hud import HUDComponent
 from components.component_move import MovementComponent
 from components.component_perception import PerceptionComponent
-from components.component_projectile import ProjectileComponent
 from components.component_sprite import SpriteComponent
 from components.component_transform import TransformComponent
 from game_object import GameObject
+from projectile import BombProjectile, MissileProjectile
 
 IDLE_FRAME_W = 41
 IDLE_FRAME_H = 51
@@ -30,9 +30,7 @@ BOMB_FRAME_H = 55
 BOMB_FRAME_COUNT = 6
 BOMB_ANIM_SPEED = 0.12
 BOMB_DAMAGE = 10
-BOMB_FLIGHT_GRAVITY = -900.0
-BOMB_MIN_HEIGHT = 90.0
-BOMB_LIFETIME = 3.0
+BOMB_FLIGHT_GRAVITY = -200.0
 
 GUN_FRAME_W = 54
 GUN_FRAME_H = 52
@@ -45,207 +43,17 @@ BACKRUN_FRAME_W = 45
 BACKRUN_FRAME_H = 50
 BACKRUN_FRAME_COUNT = 5
 BACKRUN_SPEED = 220.0
-BACKRUN_DURATION = 0.75
+BACKRUN_DURATION = 2
 BACKRUN_JUMP_VY = 180.0
 
 HIGH_ALTITUDE_RATIO = 1.8
 
-ATTACK_COOLDOWN = 1.4
+ATTACK_COOLDOWN = 2.5
 DETECTION_RANGE = 360.0
 BACKRUN_RANGE = 130.0
 BOMB_ATTACK_RANGE = 260.0
 
 SCALE = 2
-
-
-class ExplosionEffect(GameObject):
-    def __init__(self, x, y, images, interval=0.05):
-        super().__init__()
-        self.images = images
-        self.interval = interval
-        self.timer = 0.0
-        self.index = 0
-
-        max_w = max(img.w for img in images)
-        max_h = max(img.h for img in images)
-
-        width = max_w
-        height = max_h
-        self.transform = self.add_component(TransformComponent(x, y, width, height))
-        self.sprite = self.add_component(SpriteComponent(images[0], images[0].w, images[0].h))
-
-    def update(self, target=None):
-        dt = game_framework.frame_time
-        self.timer += dt
-        if self.timer >= self.interval:
-            self.timer -= self.interval
-            self.index += 1
-            if self.index >= len(self.images):
-                game_world.remove_object(self)
-                return
-            self.sprite.image = self.images[self.index]
-            self.sprite.frame_w = self.sprite.image.w
-            self.sprite.frame_h = self.sprite.image.h
-
-        super().update()
-
-
-class BombProjectile(GameObject):
-    def __init__(self, x, y, target_pos, image, explosion_images, damage=BOMB_DAMAGE):
-        super().__init__()
-        self.collision_group = CollisionGroup.PROJECTILE
-        self.explosion_images = explosion_images
-        self.damage = damage
-        self.lifetime = 0.0
-
-        width = 40
-        height = 44
-        self.transform = self.add_component(TransformComponent(x, y, width, height))
-        self.collision = self.add_component(
-            CollisionComponent(
-                group=CollisionGroup.PROJECTILE,
-                mask=CollisionGroup.PLAYER,
-                width=width,
-                height=height,
-            )
-        )
-
-        self.image = image
-        self.render = None
-        if image:
-            from components.component_render import RenderComponent
-
-            self.render = self.add_component(RenderComponent(image, width, height))
-
-        self.exploded = False
-
-        dx = target_pos[0] - x
-        dy = target_pos[1] - y
-        direction = 1 if dx >= 0 else -1
-        speed_x = 180.0 * direction
-        flight_time = max(0.4, min(1.2, abs(dx) / abs(speed_x)))
-        self.vx = speed_x
-        self.vy = (dy - 0.5 * BOMB_FLIGHT_GRAVITY * flight_time * flight_time) / flight_time
-
-    def explode(self):
-        if self.exploded:
-            return
-        self.exploded = True
-        game_world.add_object(
-            ExplosionEffect(self.transform.x, self.transform.y, self.explosion_images),
-            depth=1,
-        )
-        game_world.remove_object(self)
-
-    def update(self, target=None):
-        if self.exploded:
-            return
-
-        dt = game_framework.frame_time
-        self.lifetime += dt
-
-        self.vy += BOMB_FLIGHT_GRAVITY * dt
-        self.transform.x += self.vx * dt
-        self.transform.y += self.vy * dt
-
-        cw = get_canvas_width()
-        ch = get_canvas_height()
-        if (
-            self.transform.x < -self.transform.w
-            or self.transform.x > cw + self.transform.w
-            or self.transform.y < -self.transform.h
-            or self.transform.y > ch + self.transform.h
-        ):
-            game_world.remove_object(self)
-            return
-
-        if self.transform.y <= BOMB_MIN_HEIGHT or self.lifetime >= BOMB_LIFETIME:
-            self.explode()
-            return
-
-        if target and hasattr(target, "transform"):
-            dx = target.transform.x - self.transform.x
-            dy = target.transform.y - self.transform.y
-            if dx * dx + dy * dy <= 900:
-                self.explode()
-                return
-
-        super().update()
-
-    def handle_collision(self, other):
-        if self.exploded:
-            return
-        if getattr(other, "collision_group", None) == CollisionGroup.PLAYER:
-            combat = getattr(other, "combat", None)
-            if combat:
-                combat.take_damage(self.damage)
-            if hasattr(other, "transform"):
-                knock_dir = 1 if self.transform.x >= other.transform.x else -1
-                other.transform.x -= knock_dir * 35
-                other.transform.y += 28
-            self.explode()
-
-
-class MissileProjectile(GameObject):
-    def __init__(self, x, y, direction, image, damage=MISSILE_DAMAGE):
-        super().__init__()
-        self.collision_group = CollisionGroup.PROJECTILE
-        self.damage = damage
-        self.vx, self.vy = direction
-        length = math.hypot(self.vx, self.vy)
-        if length == 0:
-            self.vx, self.vy = 1.0, 0.0
-        else:
-            self.vx /= length
-            self.vy /= length
-
-        width = 18
-        height = 18
-        self.transform = self.add_component(TransformComponent(x, y, width, height))
-        self.collision = self.add_component(
-            CollisionComponent(
-                group=CollisionGroup.PROJECTILE,
-                mask=CollisionGroup.PLAYER,
-                width=width,
-                height=height,
-            )
-        )
-
-        self.image = image
-        self.render = None
-        if image:
-            from components.component_render import RenderComponent
-
-            self.render = self.add_component(RenderComponent(image, width, height))
-
-    def update(self, target=None):
-        dt = game_framework.frame_time
-        self.transform.x += self.vx * MISSILE_SPEED * dt
-        self.transform.y += self.vy * MISSILE_SPEED * dt
-
-        cw = get_canvas_width()
-        ch = get_canvas_height()
-        if (
-            self.transform.x < -self.transform.w
-            or self.transform.x > cw + self.transform.w
-            or self.transform.y < -self.transform.h
-            or self.transform.y > ch + self.transform.h
-        ):
-            game_world.remove_object(self)
-            return
-
-        super().update()
-
-    def handle_collision(self, other):
-        if getattr(other, "collision_group", None) == CollisionGroup.PLAYER:
-            combat = getattr(other, "combat", None)
-            if combat:
-                combat.take_damage(self.damage)
-            if hasattr(other, "transform"):
-                knock_dir = 1 if self.transform.x >= other.transform.x else -1
-                other.transform.x -= knock_dir * 18
-                other.transform.y += 12
-            game_world.remove_object(self)
 
 
 class GoblinKing(GameObject):
@@ -460,8 +268,16 @@ class GoblinKing(GameObject):
 
         if self.frame == BOMB_FRAME_COUNT - 1 and not self.attack_fired:
             self.attack_fired = True
-            target_pos = (zag.x, zag.y) if zag else (self.x + self.dir * 120, self.y)
-            bomb = BombProjectile(self.x, self.y, target_pos, self.bomb_proj_image, self.explosion_images)
+            target_ref = zag if zag else (self.x + self.dir * 120, self.y)
+            bomb = BombProjectile(
+                self.x,
+                self.y,
+                target_ref,
+                self.bomb_proj_image,
+                self.explosion_images,
+                damage=BOMB_DAMAGE,
+                gravity=BOMB_FLIGHT_GRAVITY,
+            )
             game_world.add_object(bomb)
 
     def _start_gun_attack(self, zag):
@@ -494,7 +310,13 @@ class GoblinKing(GameObject):
                 direction = (zag.x - self.x, zag.y - self.y)
             else:
                 direction = (-1, 0) if self.dir < 0 else (1, 0)
-            missile = MissileProjectile(self.x + self.dir * 30, self.y + 10, direction, self.missile_image)
+            missile = MissileProjectile(
+                self.x + self.dir * 30,
+                self.y + 10,
+                direction,
+                self.missile_image,
+                damage=MISSILE_DAMAGE,
+            )
             game_world.add_object(missile)
 
     def _can_backrun(self):
@@ -547,9 +369,6 @@ class GoblinKing(GameObject):
 
     def handle_collision(self, other):
         if getattr(other, "collision_group", None) == CollisionGroup.PROJECTILE:
-            projectile_comp = other.get(ProjectileComponent) if hasattr(other, "get") else None
-            if projectile_comp:
-                projectile_comp.on_hit(self)
             self._enter_hit(other)
         elif getattr(other, "collision_group", None) == CollisionGroup.PLAYER:
             combat = getattr(other, "combat", None)
