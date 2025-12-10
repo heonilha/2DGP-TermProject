@@ -169,6 +169,12 @@ class BombProjectile(Projectile):
         self.detonate_distance_sq = detonate_distance * detonate_distance
         self.explosion_images = explosion_images
         self.exploded = False
+        self.explosion_duration = 0.2
+        self.explosion_timer = 0.0
+        self.damaged_targets = set()
+
+        self.explosion_width = max((img.w for img in explosion_images), default=40)
+        self.explosion_height = max((img.h for img in explosion_images), default=44)
 
         self.flight_time = max(0.5, min(1.2, abs(dx) / 200.0 + 0.6))
         vx = dx / self.flight_time
@@ -192,30 +198,53 @@ class BombProjectile(Projectile):
         self.vy = vy
         self.movement.xdir = 1 if self.vx >= 0 else -1
 
+    def _apply_explosion_damage(self, target=None):
+        if not target or target in self.damaged_targets:
+            return
+
+        combat = target.get(CombatComponent) if hasattr(target, "get") else None
+        if combat:
+            combat.take_damage(self.damage)
+        elif hasattr(target, "take_damage"):
+            target.take_damage(self.damage)
+
+        if hasattr(target, "transform"):
+            target.transform.y -= 10
+
+        self.damaged_targets.add(target)
+
     def _explode(self, target=None):
         if self.exploded:
             return
         self.exploded = True
+        self.explosion_timer = 0.0
+
+        self.transform.w = self.explosion_width
+        self.transform.h = self.explosion_height
+        self.collision.override_width = self.explosion_width
+        self.collision.override_height = self.explosion_height
+
+        self.vx = 0
+        self.vy = 0
+        self.movement.xdir = 0
+        self.movement.ydir = 0
+
         game_world.add_object(ExplosionEffect(self.transform.x, self.transform.y, self.explosion_images), depth=1)
-
-        if target:
-            combat = target.get(CombatComponent) if hasattr(target, "get") else None
-            if combat:
-                combat.take_damage(self.damage)
-            elif hasattr(target, "take_damage"):
-                target.take_damage(self.damage)
-            if hasattr(target, "transform"):
-                target.transform.y -= 10
-
-        game_world.remove_object(self)
+        self._apply_explosion_damage(target)
 
     def update(self, target=None):
+        dt = game_framework.frame_time
         if self.exploded:
+            self.explosion_timer += dt
+            if self.explosion_timer >= self.explosion_duration:
+                game_world.remove_object(self)
+                return
+
+            super().update()
             return
 
         target = target or self.target
 
-        dt = game_framework.frame_time
         self.lifetime += dt
 
         self.vy += self.gravity * dt
@@ -253,10 +282,11 @@ class BombProjectile(Projectile):
         super().update()
 
     def handle_collision(self, other):
-        if self.exploded:
-            return
         if getattr(other, "collision_group", None) == CollisionGroup.PLAYER:
-            self._explode(other)
+            if self.exploded:
+                self._apply_explosion_damage(other)
+            else:
+                self._explode(other)
 
 
 class MissileProjectile(Projectile):
