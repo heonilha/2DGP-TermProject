@@ -16,12 +16,6 @@ STAGES = {
         "monsters": [
             {"type": "Goblin", "count": 3},
             {"type": "GoblinArcher", "count": 2},
-            {
-                "type": "GoblinKing",
-                "positions": [
-                    {"x": 1280, "y": 720},
-                ],
-            },
         ],
     },
     3: {

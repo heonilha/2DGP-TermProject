@@ -9,7 +9,6 @@ import camera
 from zag import Zag
 from monsters.goblin import Goblin
 from monsters.goblin_archer import GoblinArcher
-from monsters.goblin_king import GoblinKing
 from monsters.slime import Slime
 from monsters.slime_king import SlimeKing
 from background import Background
@@ -78,17 +77,10 @@ def _spawn_stage_monsters():
     monsters = []
     for mob_info in current_stage_data["monsters"]:
         mob_class = get_monster_class(mob_info["type"])
-        positions = mob_info.get("positions")
-        if positions:
-            for pos in positions:
-                monster = _create_monster_with_position(mob_class, pos)
-                monsters.append(monster)
-                game_world.add_object(monster, 1)
-        else:
-            for _ in range(mob_info.get("count", 0)):
-                monster = mob_class()
-                monsters.append(monster)
-                game_world.add_object(monster, 1)
+        for _ in range(mob_info["count"]):
+            monster = mob_class()
+            monsters.append(monster)
+            game_world.add_object(monster, 1)
 
 
 def get_monster_class(monster_type: str):
@@ -98,25 +90,11 @@ def get_monster_class(monster_type: str):
     return monster_class
 
 
-def _create_monster_with_position(mob_class, pos):
-    try:
-        monster = mob_class(pos)
-    except TypeError:
-        monster = mob_class()
-
-    x, y = (pos.get("x"), pos.get("y")) if isinstance(pos, dict) else pos
-    if hasattr(monster, "transform") and monster.transform:
-        monster.transform.x = x
-        monster.transform.y = y
-    return monster
-
-
 MONSTER_TYPES = {
     "Slime": Slime,
     "Goblin": Goblin,
     "GoblinArcher": GoblinArcher,
     "SlimeKing": SlimeKing,
-    "GoblinKing": GoblinKing,
 }
 
 MONSTER_CLASS_TUPLE = tuple(set(MONSTER_TYPES.values()))
