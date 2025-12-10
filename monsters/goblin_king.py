@@ -48,7 +48,7 @@ BACKRUN_SPEED = 220.0
 BACKRUN_DURATION = 0.75
 BACKRUN_JUMP_VY = 180.0
 
-HIGH_ALTITUDE_RATIO = 0.72
+HIGH_ALTITUDE_RATIO = 1.8
 
 ATTACK_COOLDOWN = 1.4
 DETECTION_RANGE = 360.0
@@ -418,12 +418,12 @@ class GoblinKing(GameObject):
             self._update_sprite_flip()
             if self._is_airborne():
                 return
+            if self.perception.is_in_range(BACKRUN_RANGE) and self._can_backrun():
+                self._start_backrun()
+                return
             if self._prefer_bombs_only():
                 if self.attack_timer >= ATTACK_COOLDOWN and self.perception.is_in_range(DETECTION_RANGE):
                     self._start_bomb_attack(zag)
-                return
-            if self.perception.is_in_range(BACKRUN_RANGE) and self._can_backrun():
-                self._start_backrun()
                 return
             if self.perception.is_in_range(DETECTION_RANGE) and self.attack_timer >= ATTACK_COOLDOWN:
                 if self.perception.is_in_range(BOMB_ATTACK_RANGE):
