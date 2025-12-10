@@ -420,7 +420,7 @@ class SlimeKing(GameObject):
                     self.frame = self.frame_indices[self.fall_anim_index]
 
             if self.falling and self.y <= self.jump_target_y:
-                self.y = self.jump_target_y
+                # self.y = self.jump_target_y
                 self.jump_attack_state = "landing"
                 self.landing_attack_timer = 0.2
                 self.frame = self.frame_indices[-1]
