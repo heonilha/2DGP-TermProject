@@ -77,7 +77,7 @@ class GameUI:
         self.font.draw(300, 100, f'x {mp_count}', (255, 255, 255))
 
         # --- 골드 표시 (상단 오른쪽) ---
-        gold_x = canvas_width - 200
+        gold_x = canvas_width - 300
         gold_y = canvas_height - 80
         self.gold_image.draw(gold_x, gold_y)
         self.font.draw(gold_x + 50, gold_y - 10, f'x {player.gold}', (255, 215, 0))

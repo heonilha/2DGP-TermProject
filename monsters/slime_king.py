@@ -31,7 +31,6 @@ ATTACK_ANIM_SPEED = 0.12
 ATTACK_COOLTIME = 2.5
 ATTACK_DAMAGE = 25
 ATTACK_HOLD_DURATION = 1.0  # 돌진 전 텀
-CLOSE_ATTACK_RANGE = 180.0
 
 HOP_DISTANCE = 55.0
 HOP_HEIGHT = 16.0
@@ -258,11 +257,7 @@ class SlimeKing(GameObject):
         if self.attack_state != "none" or self.hopping or self.preparing or self.jump_attack_state != "none":
             return BehaviorTree.FAIL
 
-        distance = self.perception.distance_to_target()
-        if distance is None:
-            return BehaviorTree.FAIL
-
-        if distance <= CLOSE_ATTACK_RANGE and self.attack_cooltime_timer >= ATTACK_COOLTIME:
+        if self.perception.is_in_range(360.0) and self.attack_cooltime_timer >= ATTACK_COOLTIME:
             return BehaviorTree.SUCCESS
         return BehaviorTree.FAIL
 
