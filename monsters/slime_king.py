@@ -13,7 +13,6 @@ from components.component_hud import HUDComponent
 from components.component_attack import AttackComponent
 from components.component_move import MovementComponent, MovementType
 from components.component_perception import PerceptionComponent
-from components.component_projectile import ProjectileComponent
 from components.component_sprite import SpriteComponent
 from components.component_transform import TransformComponent
 from game_object import GameObject
@@ -441,9 +440,7 @@ class SlimeKing(GameObject):
 
     def handle_collision(self, other):
         if getattr(other, "collision_group", None) == CollisionGroup.PROJECTILE:
-            projectile_comp = other.get(ProjectileComponent)
-            if projectile_comp:
-                projectile_comp.on_hit(self)
+            self._enter_hit(other)
         elif getattr(other, "collision_group", None) == CollisionGroup.PLAYER:
             # 플레이어 근접 공격으로 명중했을 때 SlimeKing도 피해를 입도록 처리
             attack_comp = other.get(AttackComponent) if hasattr(other, "get") else None
