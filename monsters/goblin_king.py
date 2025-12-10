@@ -152,7 +152,7 @@ class BombProjectile(GameObject):
                 self.explode()
                 return
 
-        super().update(target)
+        super().update()
 
     def handle_collision(self, other):
         if self.exploded:
@@ -216,7 +216,7 @@ class MissileProjectile(GameObject):
             game_world.remove_object(self)
             return
 
-        super().update(target)
+        super().update()
 
     def handle_collision(self, other):
         if getattr(other, "collision_group", None) == CollisionGroup.PLAYER:
