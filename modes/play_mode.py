@@ -4,6 +4,7 @@ import game_framework
 import game_world
 import os
 from modes import select_mode
+from modes import title_mode
 import camera
 
 from zag import Zag
@@ -22,11 +23,15 @@ monsters = []
 game_running=True
 current_stage_data = None
 victory_timer = 2.0
+defeat_timer = 2.0
 
 # 프로젝트의 루트 디렉토리를 기준으로 리소스 경로를 찾도록 설정
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 victory_image=None
 victory_background=None
+defeat_image=None
+defeat_background=None
+result_state = None
 
 def handle_events():
     event_list = get_events()
@@ -44,7 +49,7 @@ def prepare_stage(stage_id):
 
 
 def init():
-    global victory_image, victory_background, victory_timer
+    global victory_image, victory_background, victory_timer, defeat_image, defeat_background, defeat_timer, result_state
     if current_stage_data is None:
         prepare_stage(1)
     image_path = os.path.join(BASE_DIR, 'resource', 'Image', 'GUI', 'clear.png')
@@ -52,6 +57,13 @@ def init():
     victory_background_path = os.path.join(BASE_DIR, 'resource', 'Image', 'GUI','clearEmptyImage.png')
     victory_background = load_image(victory_background_path)
     victory_timer = 2.0
+
+    defeat_path = os.path.join(BASE_DIR, 'resource', 'Image', 'GUI', 'defeat.png')
+    defeat_image = load_image(defeat_path)
+    defeat_background_path = os.path.join(BASE_DIR, 'resource', 'Image', 'GUI', 'clearEmptyImage.png')
+    defeat_background = load_image(defeat_background_path)
+    defeat_timer = 2.0
+    result_state = None
 
     game_world.camera = camera.Camera(1600,900)
 
@@ -102,15 +114,20 @@ MONSTER_TYPES = {
 MONSTER_CLASS_TUPLE = tuple(set(MONSTER_TYPES.values()))
 
 def update():
-    global game_running, victory_timer
+    global game_running, victory_timer, defeat_timer, result_state
     if not game_running:
-        victory_timer -= game_framework.frame_time  # ◀ 1-1. 타이머 감소
+        if result_state == 'victory':
+            victory_timer -= game_framework.frame_time
+            if victory_timer <= 0:
+                game_world.clear()
+                game_framework.change_mode(select_mode)
+        elif result_state == 'defeat':
+            defeat_timer -= game_framework.frame_time
+            if defeat_timer <= 0:
+                game_world.clear()
+                game_framework.change_mode(title_mode)
 
-        if victory_timer <= 0:
-            game_world.clear()
-            game_framework.change_mode(select_mode)  # ◀ 1-2. 0초 되면 모드 변경
-
-        return  # ◀ 1-3. (중요) 게임 월드 업데이트는 실행 안 함
+        return
 
     for layer in game_world.world:
         for o in layer[:]:  # 2. (안전성을 위해) 리스트의 복사본 순회
@@ -124,6 +141,12 @@ def update():
         game_world.camera.update(zag)
     game_world.handle_collisions()
 
+    if zag and zag.hp <= 0:
+        game_running = False
+        result_state = 'defeat'
+        defeat_timer = 2.0
+        return
+
     monster_exists = False
     for layer in game_world.world:
         for obj in layer:
@@ -136,6 +159,7 @@ def update():
     if not monster_exists:
         game_running = False
         victory_timer=2.0
+        result_state = 'victory'
         print("Victory! All monsters defeated.")
 
 
@@ -147,11 +171,14 @@ def draw():
         game_world.render()
         ui.draw(zag)
     else:
-        # 2. 게임이 멈췄을 때 (승리)
-        #    게임 월드를 그리지 않고, 오직 승리 이미지만 그립니다.
-        if victory_image:
+        # 2. 게임이 멈췄을 때 (승리/패배)
+        #    게임 월드를 그리지 않고, 오직 결과 이미지만 그립니다.
+        if result_state == 'victory' and victory_image:
             victory_background.draw(get_canvas_width() // 2, get_canvas_height() // 2, get_canvas_width()*2, get_canvas_height()*2)
             victory_image.draw(get_canvas_width() // 2, get_canvas_height() // 2)
+        elif result_state == 'defeat' and defeat_image:
+            defeat_background.draw(get_canvas_width() // 2, get_canvas_height() // 2, get_canvas_width()*2, get_canvas_height()*2)
+            defeat_image.draw(get_canvas_width() // 2, get_canvas_height() // 2)
 
     update_canvas()
 
