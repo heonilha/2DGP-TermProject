@@ -42,11 +42,11 @@ class Projectile(GameObject):
 
         if move and move.type == MovementType.DIRECTIONAL:
             cw = get_canvas_width()
-            ch = get_canvas_height()
+            world_height = get_canvas_height() * 2
             hit_left = tr.x <= 200 and move.xdir < 0
             hit_right = tr.x >= cw - 200 and move.xdir > 0
             hit_bottom = tr.y <= 100 and move.ydir < 0
-            hit_top = tr.y >= ch * 2 - 100 and move.ydir > 0
+            hit_top = tr.y >= world_height - 100 and move.ydir > 0
 
             if hit_left or hit_right or hit_bottom or hit_top:
                 game_world.remove_object(self)
