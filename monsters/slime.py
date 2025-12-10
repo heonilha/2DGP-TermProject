@@ -52,8 +52,8 @@ class Slime(GameObject):
         if not os.path.exists(image_path):
             raise FileNotFoundError(f"Image not found: `{image_path}`")
 
-        start_x = random.randint(100, 1100)
-        start_y = random.randint(100, 600)
+        start_x = random.randint(120, max(130, get_canvas_width() - 120))
+        start_y = random.randint(120, get_canvas_height() * 2 - 120)
 
         self.transform = self.add_component(TransformComponent(start_x, start_y, FRAME_W * SCALE, FRAME_H * SCALE))
         self.sprite = self.add_component(SpriteComponent(load_image(image_path), FRAME_W, FRAME_H))

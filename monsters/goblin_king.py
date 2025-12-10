@@ -97,7 +97,7 @@ class GoblinKing(GameObject):
         self.explosion_images = [load_image(p) for p in explosion_paths]
 
         start_x = random.randint(200, max(220, get_canvas_width() - 200))
-        start_y = random.randint(get_canvas_height(), get_canvas_height()+500)
+        start_y = random.randint(int(get_canvas_height() * 1.4), get_canvas_height() * 2 - 250)
 
         self.transform = self.add_component(
             TransformComponent(

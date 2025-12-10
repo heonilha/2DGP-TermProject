@@ -72,7 +72,7 @@ class GoblinArcher(GameObject):
             raise FileNotFoundError(f"Image not found: `{image_path}`")
 
         start_x = random.randint(140, max(150, get_canvas_width() - 140))
-        start_y = random.randint(140, 420)
+        start_y = random.randint(160, get_canvas_height() * 2 - 160)
 
         self.transform = self.add_component(
             TransformComponent(start_x, start_y, FRAME_W * SCALE, FRAME_H * SCALE)
