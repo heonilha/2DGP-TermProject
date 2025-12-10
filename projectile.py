@@ -163,6 +163,7 @@ class BombProjectile(Projectile):
 
         self.gravity = gravity
         self.target = target
+        self.target_pos = target_pos
         self.lifetime = 0.0
         self.max_lifetime = lifetime
         self.detonate_distance_sq = detonate_distance * detonate_distance
@@ -233,15 +234,20 @@ class BombProjectile(Projectile):
             game_world.remove_object(self)
             return
 
-        if target and hasattr(target, "transform"):
-            dx = target.transform.x - self.transform.x
-            dy = target.transform.y - self.transform.y
-            if dx * dx + dy * dy <= self.detonate_distance_sq:
-                self._explode(target)
-                return
+        dx = self.target_pos[0] - self.transform.x
+        dy = self.target_pos[1] - self.transform.y
+        if dx * dx + dy * dy <= self.detonate_distance_sq:
+            if target and hasattr(target, "transform"):
+                tx = target.transform.x - self.transform.x
+                ty = target.transform.y - self.transform.y
+                if tx * tx + ty * ty <= self.detonate_distance_sq:
+                    self._explode(target)
+                    return
+            self._explode()
+            return
 
-        if self.transform.y <= 0 or self.lifetime >= self.max_lifetime:
-            self._explode(target)
+        if self.lifetime >= self.max_lifetime:
+            self._explode()
             return
 
         super().update()
