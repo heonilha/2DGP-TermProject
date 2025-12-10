@@ -480,10 +480,9 @@ class GoblinKing(GameObject):
             game_world.add_object(missile)
 
     def _can_backrun(self):
-        canvas_w = get_canvas_width()
-        next_x = self.x - self.dir * BACKRUN_SPEED * BACKRUN_DURATION
-        boundary_padding = 200
-        return boundary_padding < next_x < canvas_w - boundary_padding
+        # Always allow the backrun; the MovementComponent's clamping keeps the boss
+        # inside the play area even when starting near the boundary.
+        return True
 
     def _start_backrun(self):
         self.state = "backrun"
