@@ -25,6 +25,11 @@ current_stage_data = None
 victory_timer = 2.0
 defeat_timer = 2.0
 world_cleared = False
+persistent_player_state = {
+    "gold": 0,
+    "hp_potions": 3,
+    "mp_potions": 3,
+}
 
 # 프로젝트의 루트 디렉토리를 기준으로 리소스 경로를 찾도록 설정
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
@@ -74,6 +79,7 @@ def init():
     # 남아 있던 상태(HP 0 등) 때문에 즉시 패배 화면이 뜨는 문제를 방지합니다.
     # 매ステ이지 시작 시 새 플레이어 객체를 생성해 완전히 초기화합니다.
     zag = Zag()
+    _load_player_state()
     game_world.add_object(zag, 1)
     _spawn_stage_monsters()
 
@@ -121,6 +127,7 @@ def update():
             victory_timer -= game_framework.frame_time
             if victory_timer <= 0:
                 if not world_cleared:
+                    _save_player_state()
                     game_world.clear()
                     world_cleared = True
                 game_framework.change_mode(select_mode)
@@ -128,6 +135,7 @@ def update():
             defeat_timer -= game_framework.frame_time
             if defeat_timer <= 0:
                 if not world_cleared:
+                    _save_player_state()
                     game_world.clear()
                     world_cleared = True
                 game_framework.change_mode(title_mode)
@@ -151,6 +159,7 @@ def update():
         result_state = 'defeat'
         defeat_timer = 2.0
         if not world_cleared:
+            _save_player_state()
             game_world.clear()
             world_cleared = True
         return
@@ -168,6 +177,7 @@ def update():
         game_running = False
         victory_timer=2.0
         result_state = 'victory'
+        _save_player_state()
         print("Victory! All monsters defeated.")
 
 
@@ -193,6 +203,24 @@ def draw():
 
 def finish():
     game_world.clear()
+
+
+def _save_player_state():
+    if zag is None:
+        return
+
+    persistent_player_state["gold"] = getattr(zag, "gold", persistent_player_state["gold"])
+    persistent_player_state["hp_potions"] = getattr(zag, "hp_potions", persistent_player_state["hp_potions"])
+    persistent_player_state["mp_potions"] = getattr(zag, "mp_potions", persistent_player_state["mp_potions"])
+
+
+def _load_player_state():
+    if zag is None:
+        return
+
+    zag.gold = persistent_player_state.get("gold", zag.gold)
+    zag.hp_potions = persistent_player_state.get("hp_potions", zag.hp_potions)
+    zag.mp_potions = persistent_player_state.get("mp_potions", zag.mp_potions)
 
 def pause(): pass
 def resume(): pass
