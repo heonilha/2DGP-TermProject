@@ -18,28 +18,23 @@ from components.component_transform import TransformComponent
 from game_object import GameObject
 
 # Sprite and animation settings
-IDLE_FRAME_W = 47
-IDLE_FRAME_H = 71
 IDLE_FRAMES = [0, 1, 2, 1]
 IDLE_ANIM_SPEED = 0.15
+IDLE_UNIQUE_FRAMES = 3
 
-HIT_FRAME_W = 47
-HIT_FRAME_H = 71
 HIT_DURATION = 0.18
 HIT_KNOCKBACK = 140.0
 INVINCIBLE_DURATION = 0.35
 
-ATTACK_FRAME_W = 64
-ATTACK_FRAME_H = 64
-ATTACK_FRAME_COUNT = 6
+BOMB_ATTACK_FRAMES = 6
+MISSILE_ATTACK_EXPECTED_FRAMES = 6
 ATTACK_ANIM_SPEED = 0.11
 ATTACK_COOLDOWN = 1.4
 BOMB_DAMAGE = 18
 MISSILE_DAMAGE = 14
 
-BACKRUN_FRAME_W = 47
-BACKRUN_FRAME_H = 71
 BACKRUN_FRAMES = [0, 1, 2, 3, 4]
+BACKRUN_FRAME_COUNT = 5
 BACKRUN_ANIM_SPEED = 0.12
 BACKRUN_DISTANCE = 240.0
 BACKRUN_HEIGHT = 120.0
@@ -51,7 +46,6 @@ BOMB_ARC_HEIGHT = 180.0
 BOMB_ARC_DURATION = 0.95
 
 MISSILE_SPEED = 480.0
-PROJECTILE_SIZE = 48
 
 SCALE = 2.5
 COLLISION_SCALE = 0.9
@@ -74,19 +68,20 @@ class BombProjectile(GameObject):
         if not os.path.exists(bomb_path):
             raise FileNotFoundError("bomb.png not found for BombProjectile")
 
+        bomb_image = load_image(bomb_path)
+        width, height_px = bomb_image.w, bomb_image.h
+
         self.collision_group = CollisionGroup.PROJECTILE
 
-        self.transform = self.add_component(
-            TransformComponent(start_pos[0], start_pos[1], PROJECTILE_SIZE, PROJECTILE_SIZE)
-        )
-        self.sprite = self.add_component(SpriteComponent(load_image(bomb_path), PROJECTILE_SIZE, PROJECTILE_SIZE))
+        self.transform = self.add_component(TransformComponent(start_pos[0], start_pos[1], width, height_px))
+        self.sprite = self.add_component(SpriteComponent(bomb_image, width, height_px))
         self.movement = self.add_component(MovementComponent(speed=0))
         self.collision = self.add_component(
             CollisionComponent(
                 group=CollisionGroup.PROJECTILE,
                 mask=CollisionGroup.PLAYER,
-                width=PROJECTILE_SIZE * 0.8,
-                height=PROJECTILE_SIZE * 0.8,
+                width=width * 0.7,
+                height=height_px * 0.7,
             )
         )
         self.projectile = self.add_component(ProjectileComponent(BOMB_DAMAGE))
@@ -123,10 +118,19 @@ class MissileProjectile(GameObject):
         if not os.path.exists(missile_path):
             raise FileNotFoundError("GoblinKingMissile.png not found for MissileProjectile")
 
+        missile_image = load_image(missile_path)
+        if missile_image.w % MISSILE_ATTACK_EXPECTED_FRAMES == 0:
+            frame_count = MISSILE_ATTACK_EXPECTED_FRAMES
+            frame_w = missile_image.w // frame_count
+        else:
+            frame_count = 1
+            frame_w = missile_image.w
+        frame_h = missile_image.h
+
         self.collision_group = CollisionGroup.PROJECTILE
 
-        self.transform = self.add_component(TransformComponent(x, y, PROJECTILE_SIZE, PROJECTILE_SIZE))
-        self.sprite = self.add_component(SpriteComponent(load_image(missile_path), ATTACK_FRAME_W, ATTACK_FRAME_H))
+        self.transform = self.add_component(TransformComponent(x, y, frame_w, frame_h))
+        self.sprite = self.add_component(SpriteComponent(missile_image, frame_w, frame_h))
         self.sprite.frame = 0
         self.movement = self.add_component(MovementComponent(MISSILE_SPEED))
         self.movement.xdir = face_dir
@@ -134,19 +138,20 @@ class MissileProjectile(GameObject):
             CollisionComponent(
                 group=CollisionGroup.PROJECTILE,
                 mask=CollisionGroup.PLAYER,
-                width=PROJECTILE_SIZE * 0.7,
-                height=PROJECTILE_SIZE * 0.7,
+                width=frame_w * 0.9,
+                height=frame_h * 0.9,
             )
         )
         self.projectile = self.add_component(ProjectileComponent(MISSILE_DAMAGE))
         self.anim_timer = 0.0
+        self.frame_count = frame_count
 
     def update(self):
         dt = game_framework.frame_time
         self.anim_timer += dt
-        if self.anim_timer >= ATTACK_ANIM_SPEED:
+        if self.frame_count > 1 and self.anim_timer >= ATTACK_ANIM_SPEED:
             self.anim_timer -= ATTACK_ANIM_SPEED
-            self.sprite.frame = (self.sprite.frame + 1) % ATTACK_FRAME_COUNT
+            self.sprite.frame = (self.sprite.frame + 1) % self.frame_count
 
         super().update()
 
@@ -247,15 +252,32 @@ class GoblinKing(GameObject):
         else:
             start_x, start_y = spawn_pos
 
-        self.transform = self.add_component(
-            TransformComponent(start_x, start_y, IDLE_FRAME_W * SCALE, IDLE_FRAME_H * SCALE)
-        )
-        self.sprite = self.add_component(SpriteComponent(load_image(idle_path), IDLE_FRAME_W, IDLE_FRAME_H))
-        self.idle_image = self.sprite.image
+        self.idle_image = load_image(idle_path)
         self.hit_image = load_image(hit_path)
         self.bomb_attack_image = load_image(bomb_attack_path)
         self.missile_attack_image = load_image(missile_attack_path)
         self.backrun_image = load_image(backrun_path)
+
+        self.idle_frame_w = self.idle_image.w // IDLE_UNIQUE_FRAMES
+        self.idle_frame_h = self.idle_image.h
+        self.hit_frame_w = self.hit_image.w
+        self.hit_frame_h = self.hit_image.h
+        self.bomb_frame_w = self.bomb_attack_image.w // BOMB_ATTACK_FRAMES
+        self.bomb_frame_h = self.bomb_attack_image.h
+        if self.missile_attack_image.w % MISSILE_ATTACK_EXPECTED_FRAMES == 0:
+            self.missile_frame_count = MISSILE_ATTACK_EXPECTED_FRAMES
+            self.missile_frame_w = self.missile_attack_image.w // self.missile_frame_count
+        else:
+            self.missile_frame_count = 1
+            self.missile_frame_w = self.missile_attack_image.w
+        self.missile_frame_h = self.missile_attack_image.h
+        self.backrun_frame_w = self.backrun_image.w // BACKRUN_FRAME_COUNT
+        self.backrun_frame_h = self.backrun_image.h
+
+        self.transform = self.add_component(
+            TransformComponent(start_x, start_y, self.idle_frame_w * SCALE, self.idle_frame_h * SCALE)
+        )
+        self.sprite = self.add_component(SpriteComponent(self.idle_image, self.idle_frame_w, self.idle_frame_h))
 
         self.collision_group = CollisionGroup.MONSTER
         self.collision = self.add_component(
@@ -365,7 +387,7 @@ class GoblinKing(GameObject):
 
     def _start_backrun(self):
         self.state = "backrun"
-        self._set_animation(self.backrun_image, BACKRUN_FRAME_W, BACKRUN_FRAME_H, BACKRUN_FRAMES)
+        self._set_animation(self.backrun_image, self.backrun_frame_w, self.backrun_frame_h, BACKRUN_FRAMES)
         self.anim_timer = 0.0
         self.movement.start_parabolic(
             (self.x, self.y),
@@ -378,17 +400,22 @@ class GoblinKing(GameObject):
     def _end_backrun(self):
         if self.state == "backrun":
             self.state = "idle"
-            self._set_animation(self.idle_image, IDLE_FRAME_W, IDLE_FRAME_H, IDLE_FRAMES)
+            self._set_animation(self.idle_image, self.idle_frame_w, self.idle_frame_h, IDLE_FRAMES)
             self.frame_index = 0
 
     def _start_attack(self, attack_type):
         if attack_type == "bomb":
             self.state = "bomb_attack"
-            self._set_animation(self.bomb_attack_image, ATTACK_FRAME_W, ATTACK_FRAME_H, list(range(ATTACK_FRAME_COUNT)))
+            self._set_animation(
+                self.bomb_attack_image, self.bomb_frame_w, self.bomb_frame_h, list(range(BOMB_ATTACK_FRAMES))
+            )
         else:
             self.state = "missile_attack"
             self._set_animation(
-                self.missile_attack_image, ATTACK_FRAME_W, ATTACK_FRAME_H, list(range(ATTACK_FRAME_COUNT))
+                self.missile_attack_image,
+                self.missile_frame_w,
+                self.missile_frame_h,
+                list(range(self.missile_frame_count)),
             )
         self.anim_timer = 0.0
         self.attack_timer = 0.0
@@ -404,7 +431,7 @@ class GoblinKing(GameObject):
             self.frame_index += 1
             if self.frame_index >= len(self.frame_sequence):
                 self.state = "idle"
-                self._set_animation(self.idle_image, IDLE_FRAME_W, IDLE_FRAME_H, IDLE_FRAMES)
+                self._set_animation(self.idle_image, self.idle_frame_w, self.idle_frame_h, IDLE_FRAMES)
                 self.frame_index = 0
                 return
             self.sprite.frame = self.frame_sequence[self.frame_index]
@@ -431,7 +458,7 @@ class GoblinKing(GameObject):
         self.prev_state = self.state
         self.state = "hit"
         self.hit_timer = HIT_DURATION
-        self._set_animation(self.hit_image, HIT_FRAME_W, HIT_FRAME_H, [0])
+        self._set_animation(self.hit_image, self.hit_frame_w, self.hit_frame_h, [0])
         if self.movement:
             self.movement.type = MovementType.DIRECTIONAL
             if hasattr(self.movement, "_reset_path"):
@@ -447,7 +474,7 @@ class GoblinKing(GameObject):
         self.hit_timer -= dt
         if self.hit_timer <= 0:
             self.state = "idle"
-            self._set_animation(self.idle_image, IDLE_FRAME_W, IDLE_FRAME_H, IDLE_FRAMES)
+            self._set_animation(self.idle_image, self.idle_frame_w, self.idle_frame_h, IDLE_FRAMES)
             self.frame_index = 0
 
     def handle_collision(self, other):
