@@ -24,6 +24,7 @@ game_running=True
 current_stage_data = None
 victory_timer = 2.0
 defeat_timer = 2.0
+world_cleared = False
 
 # 프로젝트의 루트 디렉토리를 기준으로 리소스 경로를 찾도록 설정
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
@@ -49,7 +50,7 @@ def prepare_stage(stage_id):
 
 
 def init():
-    global victory_image, victory_background, victory_timer, defeat_image, defeat_background, defeat_timer, result_state
+    global victory_image, victory_background, victory_timer, defeat_image, defeat_background, defeat_timer, result_state, world_cleared
     if current_stage_data is None:
         prepare_stage(1)
     image_path = os.path.join(BASE_DIR, 'resource', 'Image', 'GUI', 'clear.png')
@@ -64,6 +65,7 @@ def init():
     defeat_background = load_image(defeat_background_path)
     defeat_timer = 2.0
     result_state = None
+    world_cleared = False
 
     game_world.camera = camera.Camera(1600,900)
 
@@ -114,17 +116,21 @@ MONSTER_TYPES = {
 MONSTER_CLASS_TUPLE = tuple(set(MONSTER_TYPES.values()))
 
 def update():
-    global game_running, victory_timer, defeat_timer, result_state
+    global game_running, victory_timer, defeat_timer, result_state, world_cleared
     if not game_running:
         if result_state == 'victory':
             victory_timer -= game_framework.frame_time
             if victory_timer <= 0:
-                game_world.clear()
+                if not world_cleared:
+                    game_world.clear()
+                    world_cleared = True
                 game_framework.change_mode(select_mode)
         elif result_state == 'defeat':
             defeat_timer -= game_framework.frame_time
             if defeat_timer <= 0:
-                game_world.clear()
+                if not world_cleared:
+                    game_world.clear()
+                    world_cleared = True
                 game_framework.change_mode(title_mode)
 
         return
@@ -145,6 +151,9 @@ def update():
         game_running = False
         result_state = 'defeat'
         defeat_timer = 2.0
+        if not world_cleared:
+            game_world.clear()
+            world_cleared = True
         return
 
     monster_exists = False
