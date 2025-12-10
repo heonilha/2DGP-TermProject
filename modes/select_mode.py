@@ -5,6 +5,7 @@ from modes import play_mode
 from stage_icon import StageIcon
 from ui_icon import ShopIcon
 import os
+import bgm_manager
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
@@ -19,6 +20,7 @@ def init():
     # 배경 이미지 로드
     background_path = os.path.join(BASE_DIR, 'resource','Image','GUI','clearEmptyImage.png')
     background = load_image(background_path)
+    bgm_manager.play_select_bgm()
     icon1_path=os.path.join(BASE_DIR, 'resource','Image','GUI','Stage','Icon','b1-1.png')
     icon2_path=os.path.join(BASE_DIR, 'resource','Image','GUI','Stage','Icon','b2-1.png')
     shop_icon_path=os.path.join(BASE_DIR, 'resource','Image','GUI','shop.png')

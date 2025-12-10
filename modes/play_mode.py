@@ -6,6 +6,7 @@ import os
 from modes import select_mode
 from modes import title_mode
 import camera
+import bgm_manager
 
 from zag import Zag
 from monsters.goblin import Goblin
@@ -71,6 +72,8 @@ def init():
     defeat_timer = 2.0
     result_state = None
     world_cleared = False
+
+    bgm_manager.play_stage_bgm(current_stage_data["id"])
 
     game_world.camera = camera.Camera(1600,900)
 
@@ -158,6 +161,7 @@ def update():
         game_running = False
         result_state = 'defeat'
         defeat_timer = 2.0
+        bgm_manager.stop_bgm()
         if not world_cleared:
             _save_player_state()
             game_world.clear()
@@ -178,6 +182,7 @@ def update():
         victory_timer=2.0
         result_state = 'victory'
         _save_player_state()
+        bgm_manager.stop_bgm()
         print("Victory! All monsters defeated.")
 
 
@@ -202,6 +207,7 @@ def draw():
 
 
 def finish():
+    bgm_manager.stop_bgm()
     game_world.clear()
 
 
