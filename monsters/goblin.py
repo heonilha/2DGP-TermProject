@@ -64,7 +64,7 @@ class Goblin(GameObject):
                 height=self.transform.h - 10,
             )
         )
-        self.combat = self.add_component(CombatComponent(30))
+        self.combat = self.add_component(CombatComponent(20))
         self.movement = self.add_component(MovementComponent(90))
         self.perception = self.add_component(PerceptionComponent())
         self.hud = self.add_component(HUDComponent())

@@ -90,7 +90,7 @@ class GoblinArcher(GameObject):
                 height=self.transform.h - 8,
             )
         )
-        self.combat = self.add_component(CombatComponent(24))
+        self.combat = self.add_component(CombatComponent(15))
         self.movement = self.add_component(MovementComponent(80))
         self.perception = self.add_component(PerceptionComponent())
         self.hud = self.add_component(HUDComponent())

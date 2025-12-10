@@ -119,7 +119,7 @@ class GoblinKing(GameObject):
             )
         )
         self.combat = self.add_component(
-            CombatComponent(120, invincible_duration=INVINCIBLE_DURATION, enable_invincibility=True)
+            CombatComponent(60, invincible_duration=INVINCIBLE_DURATION, enable_invincibility=True)
         )
         self.base_speed = 120
         self.movement = self.add_component(MovementComponent(self.base_speed))

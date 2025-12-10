@@ -77,7 +77,7 @@ class InputComponent(Component):
     def _use_hp_potion(self):
         owner = self.owner
         if getattr(owner, 'hp_potions', 0) > 0:
-            owner.hp = min(owner.combat.max_hp, owner.hp + 20)
+            owner.hp = min(owner.combat.max_hp, owner.hp + 50)
             owner.hp_potions -= 1
             print(f'Used HP Potion. Current HP: {owner.hp}, Remaining HP Potions: {owner.hp_potions}')
         else:
@@ -86,7 +86,7 @@ class InputComponent(Component):
     def _use_mp_potion(self):
         owner = self.owner
         if getattr(owner, 'mp_potions', 0) > 0:
-            owner.mp = min(100, owner.mp + 20)
+            owner.mp = min(100, owner.mp + 50)
             owner.mp_potions -= 1
             print(f'Used MP Potion. Current MP: {owner.mp}, Remaining MP Potions: {owner.mp_potions}')
         else:

@@ -67,7 +67,7 @@ def remove_object(o):
     if getattr(o, "collision_group", None) == CollisionGroup.MONSTER:
         for p in player:
             if hasattr(p, "gold"):
-                p.gold += 60
+                p.gold += 30
 
     for layer in world:
         if o in layer:
