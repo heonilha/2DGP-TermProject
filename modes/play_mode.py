@@ -1,8 +1,8 @@
 from pico2d import *
 
+from common import resource_path
 import game_framework
 import game_world
-import os
 from modes import select_mode
 from modes import title_mode
 import camera
@@ -32,8 +32,6 @@ persistent_player_state = {
     "mp_potions": 3,
 }
 
-# 프로젝트의 루트 디렉토리를 기준으로 리소스 경로를 찾도록 설정
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 victory_image=None
 victory_background=None
 defeat_image=None
@@ -59,15 +57,15 @@ def init():
     global victory_image, victory_background, victory_timer, defeat_image, defeat_background, defeat_timer, result_state, world_cleared
     if current_stage_data is None:
         prepare_stage(1)
-    image_path = os.path.join(BASE_DIR, 'resource', 'Image', 'GUI', 'clear.png')
+    image_path = resource_path('resource/Image/GUI/clear.png')
     victory_image = load_image(image_path)
-    victory_background_path = os.path.join(BASE_DIR, 'resource', 'Image', 'GUI','clearEmptyImage.png')
+    victory_background_path = resource_path('resource/Image/GUI/clearEmptyImage.png')
     victory_background = load_image(victory_background_path)
     victory_timer = 2.0
 
-    defeat_path = os.path.join(BASE_DIR, 'resource', 'Image', 'GUI', 'defeat.png')
+    defeat_path = resource_path('resource/Image/GUI/defeat.png')
     defeat_image = load_image(defeat_path)
-    defeat_background_path = os.path.join(BASE_DIR, 'resource', 'Image', 'GUI', 'clearEmptyImage.png')
+    defeat_background_path = resource_path('resource/Image/GUI/clearEmptyImage.png')
     defeat_background = load_image(defeat_background_path)
     defeat_timer = 2.0
     result_state = None

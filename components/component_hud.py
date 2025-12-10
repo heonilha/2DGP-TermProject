@@ -1,7 +1,7 @@
 import os
-
 from pico2d import load_image
 
+from common import resource_path
 from components.component_base import Component
 from components.component_transform import TransformComponent
 
@@ -20,10 +20,9 @@ class HUDComponent(Component):
         self.mp_offset = mp_offset
 
         if HUDComponent._hp_bar_image is None or HUDComponent._bar_base_image is None:
-            base_dir = os.path.dirname(os.path.dirname(__file__))
-            gui_dir = os.path.join(base_dir, "resource", "Image", "GUI")
-            HUDComponent._hp_bar_image = load_image(os.path.join(gui_dir, "hp_bar.png"))
-            HUDComponent._bar_base_image = load_image(os.path.join(gui_dir, "bar_base.png"))
+            gui_dir = "resource/Image/GUI"
+            HUDComponent._hp_bar_image = load_image(resource_path(f"{gui_dir}/hp_bar.png"))
+            HUDComponent._bar_base_image = load_image(resource_path(f"{gui_dir}/bar_base.png"))
 
     def draw(self):
         owner = self.owner

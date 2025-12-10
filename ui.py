@@ -1,19 +1,19 @@
-from pico2d import *
-import os
+from pico2d import get_canvas_height, get_canvas_width, load_font, load_image
+
+from common import resource_path
 from zag import Zag
-BASE_DIR = os.path.dirname(__file__)
 
 
 class GameUI:
     def __init__(self):
-        self.hp_potion_image = load_image(os.path.join(BASE_DIR, 'resource', 'Image', 'GUI','Item', 'hp_potion.png'))
-        self.mp_potion_image = load_image(os.path.join(BASE_DIR, 'resource', 'Image', 'GUI','Item', 'mp_potion.png'))
-        self.gold_image = load_image(os.path.join(BASE_DIR, 'resource', 'Image', 'GUI','Item', 'bar_coin.png'))
-        gui_dir = os.path.join(BASE_DIR, 'resource', 'Image', 'GUI')
-        self.hp_bar_image = load_image(os.path.join(gui_dir, 'hp_bar.png'))
-        self.mp_bar_image = load_image(os.path.join(gui_dir, 'mp_bar.png'))
-        self.bar_base_image = load_image(os.path.join(gui_dir, 'bar_base.png'))
-        self.font = load_font('ENCR10B.TTF', 30)
+        self.hp_potion_image = load_image(resource_path('resource/Image/GUI/Item/hp_potion.png'))
+        self.mp_potion_image = load_image(resource_path('resource/Image/GUI/Item/mp_potion.png'))
+        self.gold_image = load_image(resource_path('resource/Image/GUI/Item/bar_coin.png'))
+        gui_dir = 'resource/Image/GUI'
+        self.hp_bar_image = load_image(resource_path(f'{gui_dir}/hp_bar.png'))
+        self.mp_bar_image = load_image(resource_path(f'{gui_dir}/mp_bar.png'))
+        self.bar_base_image = load_image(resource_path(f'{gui_dir}/bar_base.png'))
+        self.font = load_font(resource_path('ENCR10B.TTF'), 30)
 
     def draw(self, player):
         canvas_width, canvas_height = get_canvas_width(), get_canvas_height()

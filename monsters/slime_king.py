@@ -3,6 +3,7 @@ import random
 
 from pico2d import get_canvas_height, get_canvas_width, load_image
 
+from common import resource_path
 import game_framework
 import game_world
 from behavior_tree import Action, BehaviorTree, Condition, Selector, Sequence
@@ -55,10 +56,9 @@ class SlimeKing(GameObject):
     def __init__(self):
         super().__init__()
 
-        base_dir = os.path.dirname(os.path.dirname(__file__))
-        idle_path = os.path.join(base_dir, "resource", "Image", "Monster", "SlimeKing Idle.png")
-        attack_path = os.path.join(base_dir, "resource", "Image", "Monster", "SlimeKing Att.png")
-        back_path = os.path.join(base_dir, "resource", "Image", "Monster", "SlimeKing Back.png")
+        idle_path = resource_path("resource/Image/Monster/SlimeKing Idle.png")
+        attack_path = resource_path("resource/Image/Monster/SlimeKing Att.png")
+        back_path = resource_path("resource/Image/Monster/SlimeKing Back.png")
 
         if not (os.path.exists(idle_path) and os.path.exists(attack_path) and os.path.exists(back_path)):
             raise FileNotFoundError("SlimeKing sprite resources are missing")

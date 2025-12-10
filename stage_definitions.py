@@ -1,4 +1,4 @@
-import os
+from common import resource_path
 
 # 스테이지별 배경과 몬스터 스폰 정보
 STAGES = {
@@ -23,5 +23,4 @@ STAGES = {
 
 
 def get_background_path(filename: str) -> str:
-    base_dir = os.path.dirname(__file__)
-    return os.path.join(base_dir, "resource", "Image", "GUI", "Stage", "BackGround", filename)
+    return resource_path(f"resource/Image/GUI/Stage/BackGround/{filename}")
