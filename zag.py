@@ -166,7 +166,7 @@ class Zag(GameObject):
         self.collision = self.add_component(
             CollisionComponent(
                 group=CollisionGroup.PLAYER,
-                mask=CollisionGroup.MONSTER,
+                mask=CollisionGroup.MONSTER | CollisionGroup.PROJECTILE,
                 width=self.transform.w - 20,
                 height=self.transform.h - 20,
             )
