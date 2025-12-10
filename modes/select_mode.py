@@ -39,7 +39,8 @@ def handle_events():
     for event in event_list:
         if event.type == SDL_QUIT:
             game_framework.quit()
-        # (ESC 키로 메뉴로 돌아가기 등)
+        elif event.type == SDL_KEYDOWN and event.key == SDLK_ESCAPE:
+            game_framework.quit()
 
         # ⭐️ 핵심: '감독'이 '배우'들에게 이벤트를 전달
         for icon in stage_icons:
