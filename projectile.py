@@ -70,20 +70,14 @@ class Projectile(GameObject):
             self.render.rotation = angle
 
     def _apply_knockback(self, other):
-        knock_dir = 1 if self.movement.xdir >= 0 else -1
-        knock_x = knock_dir * self.knockback_x
-        knock_y = self.knockback_y
-
         other_transform = getattr(other, "transform", None)
         if other_transform:
-            other_transform.x += knock_x
-            other_transform.y += knock_y
+            other_transform.y -= 10
             return
 
         other_move = other.get(MovementComponent) if hasattr(other, "get") else None
         if other_move:
-            other_move.xdir += knock_x
-            other_move.ydir += knock_y
+            other_move.ydir -= 10
 
     def handle_collision(self, other):
         if getattr(other, "collision_group", None) == CollisionGroup.PROJECTILE:
@@ -204,16 +198,13 @@ class BombProjectile(Projectile):
         game_world.add_object(ExplosionEffect(self.transform.x, self.transform.y, self.explosion_images), depth=1)
 
         if target:
-            dx = target.transform.x - self.transform.x
-            dy = target.transform.y - self.transform.y
             combat = target.get(CombatComponent) if hasattr(target, "get") else None
             if combat:
                 combat.take_damage(self.damage)
             elif hasattr(target, "take_damage"):
                 target.take_damage(self.damage)
             if hasattr(target, "transform"):
-                target.transform.x += dx * 600 / max(1.0, math.hypot(dx, dy))
-                target.transform.y += 800
+                target.transform.y -= 10
 
         game_world.remove_object(self)
 
