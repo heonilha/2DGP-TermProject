@@ -11,6 +11,7 @@ from monsters.goblin import Goblin
 from monsters.goblin_archer import GoblinArcher
 from monsters.slime import Slime
 from monsters.slime_king import SlimeKing
+from monsters.goblin_king import GoblinKing
 from background import Background
 from stage_definitions import STAGES
 from ui import GameUI
@@ -95,6 +96,7 @@ MONSTER_TYPES = {
     "Goblin": Goblin,
     "GoblinArcher": GoblinArcher,
     "SlimeKing": SlimeKing,
+    "GoblinKing": GoblinKing,
 }
 
 MONSTER_CLASS_TUPLE = tuple(set(MONSTER_TYPES.values()))
