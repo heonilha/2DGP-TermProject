@@ -16,6 +16,7 @@ STAGES = {
         "monsters": [
             {"type": "Goblin", "count": 3},
             {"type": "GoblinArcher", "count": 2},
+            {"type": "GoblinKing", "count": 1},
         ],
     },
     3: {
