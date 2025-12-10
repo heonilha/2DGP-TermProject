@@ -48,6 +48,8 @@ BACKRUN_SPEED = 220.0
 BACKRUN_DURATION = 0.75
 BACKRUN_JUMP_VY = 180.0
 
+HIGH_ALTITUDE_RATIO = 0.72
+
 ATTACK_COOLDOWN = 1.4
 DETECTION_RANGE = 360.0
 BACKRUN_RANGE = 130.0
@@ -368,6 +370,13 @@ class GoblinKing(GameObject):
         self.anim_index = 0
         self.anim_timer = 0.0
 
+    def _is_airborne(self):
+        return abs(self.vertical_velocity) > 1e-3
+
+    def _prefer_bombs_only(self):
+        canvas_height = get_canvas_height()
+        return self.transform.y >= canvas_height * HIGH_ALTITUDE_RATIO
+
     def update(self, zag=None):
         if self.hp <= 0:
             game_world.remove_object(self)
@@ -407,6 +416,12 @@ class GoblinKing(GameObject):
         if zag:
             self.dir = -1 if zag.x < self.x else 1
             self._update_sprite_flip()
+            if self._is_airborne():
+                return
+            if self._prefer_bombs_only():
+                if self.attack_timer >= ATTACK_COOLDOWN and self.perception.is_in_range(DETECTION_RANGE):
+                    self._start_bomb_attack(zag)
+                return
             if self.perception.is_in_range(BACKRUN_RANGE) and self._can_backrun():
                 self._start_backrun()
                 return
@@ -475,14 +490,17 @@ class GoblinKing(GameObject):
 
         if self.frame == GUN_FRAME_COUNT - 1 and not self.attack_fired:
             self.attack_fired = True
-            direction = (-1, 0) if self.dir < 0 else (1, 0)
+            if zag:
+                direction = (zag.x - self.x, zag.y - self.y)
+            else:
+                direction = (-1, 0) if self.dir < 0 else (1, 0)
             missile = MissileProjectile(self.x + self.dir * 30, self.y + 10, direction, self.missile_image)
             game_world.add_object(missile)
 
     def _can_backrun(self):
-        # Always allow the backrun; the MovementComponent's clamping keeps the boss
-        # inside the play area even when starting near the boundary.
-        return True
+        # Allow the backrun unless the boss is already too high, where another jump
+        # would be ineffective.
+        return not self._prefer_bombs_only()
 
     def _start_backrun(self):
         self.state = "backrun"
