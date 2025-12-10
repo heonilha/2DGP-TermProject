@@ -1,0 +1,541 @@
+import math
+import os
+import random
+
+from pico2d import get_canvas_width, get_canvas_height, load_image
+
+import game_framework
+import game_world
+from collision_manager import CollisionGroup
+from components.component_combat import CombatComponent
+from components.component_collision import CollisionComponent
+from components.component_hud import HUDComponent
+from components.component_move import MovementComponent
+from components.component_perception import PerceptionComponent
+from components.component_projectile import ProjectileComponent
+from components.component_sprite import SpriteComponent
+from components.component_transform import TransformComponent
+from game_object import GameObject
+
+IDLE_FRAME_W = 41
+IDLE_FRAME_H = 51
+IDLE_ANIM_PATTERN = [0, 1, 2, 1]
+IDLE_ANIM_SPEED = 0.14
+
+HIT_DURATION = 0.3
+INVINCIBLE_DURATION = 0.3
+
+BOMB_FRAME_W = 41
+BOMB_FRAME_H = 55
+BOMB_FRAME_COUNT = 6
+BOMB_ANIM_SPEED = 0.12
+BOMB_DAMAGE = 40
+BOMB_FLIGHT_GRAVITY = -900.0
+BOMB_MIN_HEIGHT = 90.0
+BOMB_LIFETIME = 3.0
+
+GUN_FRAME_W = 54
+GUN_FRAME_H = 52
+GUN_FRAME_COUNT = 6
+GUN_ANIM_SPEED = 0.1
+MISSILE_DAMAGE = 15
+MISSILE_SPEED = 420.0
+
+BACKRUN_FRAME_W = 45
+BACKRUN_FRAME_H = 50
+BACKRUN_FRAME_COUNT = 5
+BACKRUN_SPEED = 220.0
+BACKRUN_DURATION = 0.75
+BACKRUN_JUMP_VY = 180.0
+
+ATTACK_COOLDOWN = 1.4
+DETECTION_RANGE = 360.0
+BACKRUN_RANGE = 130.0
+BOMB_ATTACK_RANGE = 260.0
+
+SCALE = 2
+
+
+class ExplosionEffect(GameObject):
+    def __init__(self, x, y, images, interval=0.05):
+        super().__init__()
+        self.images = images
+        self.interval = interval
+        self.timer = 0.0
+        self.index = 0
+
+        width = images[0].w // 2
+        height = images[0].h // 2
+        self.transform = self.add_component(TransformComponent(x, y, width, height))
+        self.sprite = self.add_component(SpriteComponent(images[0], images[0].w, images[0].h))
+
+    def update(self, target=None):
+        dt = game_framework.frame_time
+        self.timer += dt
+        if self.timer >= self.interval:
+            self.timer -= self.interval
+            self.index += 1
+            if self.index >= len(self.images):
+                game_world.remove_object(self)
+                return
+            self.sprite.image = self.images[self.index]
+
+        super().update()
+
+
+class BombProjectile(GameObject):
+    def __init__(self, x, y, target_pos, image, explosion_images, damage=BOMB_DAMAGE):
+        super().__init__()
+        self.collision_group = CollisionGroup.PROJECTILE
+        self.explosion_images = explosion_images
+        self.damage = damage
+        self.lifetime = 0.0
+
+        width = 40
+        height = 44
+        self.transform = self.add_component(TransformComponent(x, y, width, height))
+        self.collision = self.add_component(
+            CollisionComponent(
+                group=CollisionGroup.PROJECTILE,
+                mask=CollisionGroup.PLAYER,
+                width=width,
+                height=height,
+            )
+        )
+
+        self.image = image
+        self.render = None
+        if image:
+            from components.component_render import RenderComponent
+
+            self.render = self.add_component(RenderComponent(image, width, height))
+
+        self.exploded = False
+
+        dx = target_pos[0] - x
+        dy = target_pos[1] - y
+        direction = 1 if dx >= 0 else -1
+        speed_x = 180.0 * direction
+        flight_time = max(0.4, min(1.2, abs(dx) / abs(speed_x)))
+        self.vx = speed_x
+        self.vy = (dy - 0.5 * BOMB_FLIGHT_GRAVITY * flight_time * flight_time) / flight_time
+
+    def explode(self):
+        if self.exploded:
+            return
+        self.exploded = True
+        game_world.add_object(
+            ExplosionEffect(self.transform.x, self.transform.y, self.explosion_images),
+            depth=1,
+        )
+        game_world.remove_object(self)
+
+    def update(self, target=None):
+        if self.exploded:
+            return
+
+        dt = game_framework.frame_time
+        self.lifetime += dt
+
+        self.vy += BOMB_FLIGHT_GRAVITY * dt
+        self.transform.x += self.vx * dt
+        self.transform.y += self.vy * dt
+
+        if self.transform.y <= BOMB_MIN_HEIGHT or self.lifetime >= BOMB_LIFETIME:
+            self.explode()
+            return
+
+        if target and hasattr(target, "transform"):
+            dx = target.transform.x - self.transform.x
+            dy = target.transform.y - self.transform.y
+            if dx * dx + dy * dy <= 900:
+                self.explode()
+                return
+
+        super().update(target)
+
+    def handle_collision(self, other):
+        if self.exploded:
+            return
+        if getattr(other, "collision_group", None) == CollisionGroup.PLAYER:
+            combat = getattr(other, "combat", None)
+            if combat:
+                combat.take_damage(self.damage)
+            if hasattr(other, "transform"):
+                knock_dir = 1 if self.transform.x >= other.transform.x else -1
+                other.transform.x -= knock_dir * 35
+                other.transform.y += 28
+            self.explode()
+
+
+class MissileProjectile(GameObject):
+    def __init__(self, x, y, direction, image, damage=MISSILE_DAMAGE):
+        super().__init__()
+        self.collision_group = CollisionGroup.PROJECTILE
+        self.damage = damage
+        self.vx, self.vy = direction
+        length = math.hypot(self.vx, self.vy)
+        if length == 0:
+            self.vx, self.vy = 1.0, 0.0
+        else:
+            self.vx /= length
+            self.vy /= length
+
+        width = 18
+        height = 18
+        self.transform = self.add_component(TransformComponent(x, y, width, height))
+        self.collision = self.add_component(
+            CollisionComponent(
+                group=CollisionGroup.PROJECTILE,
+                mask=CollisionGroup.PLAYER,
+                width=width,
+                height=height,
+            )
+        )
+
+        self.image = image
+        self.render = None
+        if image:
+            from components.component_render import RenderComponent
+
+            self.render = self.add_component(RenderComponent(image, width, height))
+
+    def update(self, target=None):
+        dt = game_framework.frame_time
+        self.transform.x += self.vx * MISSILE_SPEED * dt
+        self.transform.y += self.vy * MISSILE_SPEED * dt
+
+        cw = get_canvas_width()
+        ch = get_canvas_height() * 2
+        if (
+            self.transform.x < 0
+            or self.transform.x > cw
+            or self.transform.y < 0
+            or self.transform.y > ch
+        ):
+            game_world.remove_object(self)
+            return
+
+        super().update(target)
+
+    def handle_collision(self, other):
+        if getattr(other, "collision_group", None) == CollisionGroup.PLAYER:
+            combat = getattr(other, "combat", None)
+            if combat:
+                combat.take_damage(self.damage)
+            if hasattr(other, "transform"):
+                knock_dir = 1 if self.transform.x >= other.transform.x else -1
+                other.transform.x -= knock_dir * 18
+                other.transform.y += 12
+            game_world.remove_object(self)
+
+
+class GoblinKing(GameObject):
+    def __init__(self):
+        super().__init__()
+        base_dir = os.path.dirname(os.path.dirname(__file__))
+        img_dir = os.path.join(base_dir, "resource", "Image", "Monster")
+
+        idle_path = os.path.join(img_dir, "GoblinKingIdle.png")
+        hit_path = os.path.join(img_dir, "Goblin KingHit.png")
+        bomb_path = os.path.join(img_dir, "GoblinKing Bomb.png")
+        gun_path = os.path.join(img_dir, "GoblinKing Att.png")
+        back_path = os.path.join(img_dir, "GoblinKing BackRun.png")
+        bomb_proj_path = os.path.join(img_dir, "bomb.png")
+        missile_path = os.path.join(img_dir, "GoblinKingMissile.png")
+        explosion_paths = [
+            os.path.join(img_dir, "hit_4x4_1.png"),
+            os.path.join(img_dir, "hit_4x4_2.png"),
+            os.path.join(img_dir, "hit_4x4_3.png"),
+        ]
+
+        if not all(os.path.exists(p) for p in [
+            idle_path,
+            hit_path,
+            bomb_path,
+            gun_path,
+            back_path,
+            bomb_proj_path,
+            missile_path,
+            *explosion_paths,
+        ]):
+            raise FileNotFoundError("GoblinKing sprite resources are missing")
+
+        self.idle_image = load_image(idle_path)
+        self.hit_image = load_image(hit_path)
+        self.bomb_image = load_image(bomb_path)
+        self.gun_image = load_image(gun_path)
+        self.back_image = load_image(back_path)
+        self.bomb_proj_image = load_image(bomb_proj_path)
+        self.missile_image = load_image(missile_path)
+        self.explosion_images = [load_image(p) for p in explosion_paths]
+
+        start_x = random.randint(200, max(220, get_canvas_width() - 200))
+        start_y = random.randint(240, get_canvas_height())
+
+        self.transform = self.add_component(
+            TransformComponent(
+                start_x,
+                start_y,
+                IDLE_FRAME_W * SCALE,
+                max(IDLE_FRAME_H, BOMB_FRAME_H) * SCALE,
+            )
+        )
+        self.sprite = self.add_component(SpriteComponent(self.idle_image, IDLE_FRAME_W, IDLE_FRAME_H))
+
+        self.collision_group = CollisionGroup.MONSTER
+        self.collision = self.add_component(
+            CollisionComponent(
+                group=CollisionGroup.MONSTER,
+                mask=CollisionGroup.PLAYER | CollisionGroup.PROJECTILE,
+                width=self.transform.w * 0.75,
+                height=self.transform.h * 0.8,
+            )
+        )
+        self.combat = self.add_component(
+            CombatComponent(120, invincible_duration=INVINCIBLE_DURATION, enable_invincibility=True)
+        )
+        self.base_speed = 120
+        self.movement = self.add_component(MovementComponent(self.base_speed))
+        self.perception = self.add_component(PerceptionComponent())
+        self.hud = self.add_component(HUDComponent(hp_width=90, hp_height=10, hp_offset=80))
+
+        self.dir = -1
+        self._update_sprite_flip()
+
+        self.state = "idle"
+        self.prev_state = "idle"
+        self.anim_timer = 0.0
+        self.anim_index = 0
+
+        self.attack_timer = 0.0
+        self.attack_fired = False
+
+        self.hit_timer = 0.0
+
+        self.backrun_timer = 0.0
+        self.vertical_velocity = 0.0
+
+    @property
+    def x(self):
+        return self.transform.x
+
+    @property
+    def y(self):
+        return self.transform.y
+
+    @property
+    def frame(self):
+        return self.sprite.frame
+
+    @frame.setter
+    def frame(self, value):
+        self.sprite.frame = value
+
+    @property
+    def hp(self):
+        return self.combat.hp
+
+    @hp.setter
+    def hp(self, value):
+        self.combat.hp = max(0, min(self.combat.max_hp, value))
+
+    def _update_sprite_flip(self):
+        if self.sprite:
+            self.sprite.flip = "" if self.dir < 0 else "h"
+
+    def _set_animation(self, image, frame_w, frame_h, index=0):
+        self.sprite.image = image
+        self.sprite.frame_w = frame_w
+        self.sprite.frame_h = frame_h
+        self.sprite.frame = index
+        self.anim_index = 0
+        self.anim_timer = 0.0
+
+    def update(self, zag=None):
+        if self.hp <= 0:
+            game_world.remove_object(self)
+            return
+
+        self.perception.target = zag
+
+        if self.hit_timer > 0:
+            self.hit_timer -= game_framework.frame_time
+            if self.hit_timer <= 0:
+                self.state = self.prev_state
+                self._restore_animation_for_state()
+
+        if self.state == "idle":
+            self._update_idle(zag)
+        elif self.state == "bomb_attack":
+            self._update_bomb_attack(zag)
+        elif self.state == "gun_attack":
+            self._update_gun_attack(zag)
+        elif self.state == "backrun":
+            self._update_backrun(zag)
+        elif self.state == "hit":
+            pass
+
+        self.attack_timer = min(ATTACK_COOLDOWN, self.attack_timer + game_framework.frame_time)
+
+        super().update()
+
+    def _update_idle(self, zag):
+        dt = game_framework.frame_time
+        self.anim_timer += dt
+        if self.anim_timer >= IDLE_ANIM_SPEED:
+            self.anim_timer -= IDLE_ANIM_SPEED
+            self.anim_index = (self.anim_index + 1) % len(IDLE_ANIM_PATTERN)
+            self.frame = IDLE_ANIM_PATTERN[self.anim_index]
+
+        if zag:
+            self.dir = -1 if zag.x < self.x else 1
+            self._update_sprite_flip()
+            if self.perception.is_in_range(BACKRUN_RANGE) and self._can_backrun():
+                self._start_backrun()
+                return
+            if self.perception.is_in_range(DETECTION_RANGE) and self.attack_timer >= ATTACK_COOLDOWN:
+                if self.perception.is_in_range(BOMB_ATTACK_RANGE):
+                    self._start_bomb_attack(zag)
+                else:
+                    if random.random() < 0.5:
+                        self._start_gun_attack(zag)
+                    else:
+                        self._start_bomb_attack(zag)
+
+    def _start_bomb_attack(self, zag):
+        self.state = "bomb_attack"
+        self.attack_timer = 0.0
+        self.attack_fired = False
+        self._set_animation(self.bomb_image, BOMB_FRAME_W, BOMB_FRAME_H)
+        self.frame = 0
+        if zag:
+            self.dir = -1 if zag.x < self.x else 1
+            self._update_sprite_flip()
+        self.movement.xdir = 0
+        self.movement.ydir = 0
+
+    def _update_bomb_attack(self, zag):
+        dt = game_framework.frame_time
+        self.anim_timer += dt
+        if self.anim_timer >= BOMB_ANIM_SPEED:
+            self.anim_timer -= BOMB_ANIM_SPEED
+            self.frame += 1
+            if self.frame >= BOMB_FRAME_COUNT:
+                self.state = "idle"
+                self._set_animation(self.idle_image, IDLE_FRAME_W, IDLE_FRAME_H)
+                self.frame = IDLE_ANIM_PATTERN[self.anim_index % len(IDLE_ANIM_PATTERN)]
+                return
+
+        if self.frame == BOMB_FRAME_COUNT - 1 and not self.attack_fired:
+            self.attack_fired = True
+            target_pos = (zag.x, zag.y) if zag else (self.x + self.dir * 120, self.y)
+            bomb = BombProjectile(self.x, self.y, target_pos, self.bomb_proj_image, self.explosion_images)
+            game_world.add_object(bomb)
+
+    def _start_gun_attack(self, zag):
+        self.state = "gun_attack"
+        self.attack_timer = 0.0
+        self.attack_fired = False
+        self._set_animation(self.gun_image, GUN_FRAME_W, GUN_FRAME_H)
+        self.frame = 0
+        if zag:
+            self.dir = -1 if zag.x < self.x else 1
+            self._update_sprite_flip()
+        self.movement.xdir = 0
+        self.movement.ydir = 0
+
+    def _update_gun_attack(self, zag):
+        dt = game_framework.frame_time
+        self.anim_timer += dt
+        if self.anim_timer >= GUN_ANIM_SPEED:
+            self.anim_timer -= GUN_ANIM_SPEED
+            self.frame += 1
+            if self.frame >= GUN_FRAME_COUNT:
+                self.state = "idle"
+                self._set_animation(self.idle_image, IDLE_FRAME_W, IDLE_FRAME_H)
+                self.frame = IDLE_ANIM_PATTERN[self.anim_index % len(IDLE_ANIM_PATTERN)]
+                return
+
+        if self.frame == GUN_FRAME_COUNT - 1 and not self.attack_fired:
+            self.attack_fired = True
+            direction = (-1, 0) if self.dir < 0 else (1, 0)
+            missile = MissileProjectile(self.x + self.dir * 30, self.y + 10, direction, self.missile_image)
+            game_world.add_object(missile)
+
+    def _can_backrun(self):
+        canvas_w = get_canvas_width()
+        next_x = self.x - self.dir * BACKRUN_SPEED * BACKRUN_DURATION
+        boundary_padding = 200
+        return boundary_padding < next_x < canvas_w - boundary_padding
+
+    def _start_backrun(self):
+        self.state = "backrun"
+        self._set_animation(self.back_image, BACKRUN_FRAME_W, BACKRUN_FRAME_H)
+        self.backrun_timer = 0.0
+        self.vertical_velocity = BACKRUN_JUMP_VY
+        self.movement.xdir = -self.dir
+        self.movement.speed = BACKRUN_SPEED
+
+    def _update_backrun(self, zag):
+        dt = game_framework.frame_time
+        self.backrun_timer += dt
+        self.anim_timer += dt
+        if self.anim_timer >= GUN_ANIM_SPEED:
+            self.anim_timer -= GUN_ANIM_SPEED
+            self.frame = (self.frame + 1) % BACKRUN_FRAME_COUNT
+
+        self.vertical_velocity += BOMB_FLIGHT_GRAVITY * 0.35 * dt
+        self.transform.y += self.vertical_velocity * dt
+        if self.transform.y < BACKRUN_FRAME_H * SCALE:
+            self.transform.y = BACKRUN_FRAME_H * SCALE
+            self.vertical_velocity = 0.0
+
+        if self.backrun_timer >= BACKRUN_DURATION:
+            self.state = "idle"
+            self._set_animation(self.idle_image, IDLE_FRAME_W, IDLE_FRAME_H)
+            self.frame = IDLE_ANIM_PATTERN[self.anim_index % len(IDLE_ANIM_PATTERN)]
+            self.movement.xdir = 0
+            self.movement.speed = self.base_speed
+            self.vertical_velocity = 0.0
+
+    def _restore_animation_for_state(self):
+        if self.state == "idle":
+            self._set_animation(self.idle_image, IDLE_FRAME_W, IDLE_FRAME_H)
+            self.frame = IDLE_ANIM_PATTERN[self.anim_index % len(IDLE_ANIM_PATTERN)]
+        elif self.state == "bomb_attack":
+            self._set_animation(self.bomb_image, BOMB_FRAME_W, BOMB_FRAME_H)
+        elif self.state == "gun_attack":
+            self._set_animation(self.gun_image, GUN_FRAME_W, GUN_FRAME_H)
+        elif self.state == "backrun":
+            self._set_animation(self.back_image, BACKRUN_FRAME_W, BACKRUN_FRAME_H)
+        elif self.state == "hit":
+            self._set_animation(self.hit_image, IDLE_FRAME_W, IDLE_FRAME_H)
+
+    def handle_collision(self, other):
+        if getattr(other, "collision_group", None) == CollisionGroup.PROJECTILE:
+            projectile_comp = other.get(ProjectileComponent) if hasattr(other, "get") else None
+            if projectile_comp:
+                projectile_comp.on_hit(self)
+            self._enter_hit(other)
+        elif getattr(other, "collision_group", None) == CollisionGroup.PLAYER:
+            combat = getattr(other, "combat", None)
+            if combat:
+                combat.take_damage(12)
+
+    def _enter_hit(self, attacker=None):
+        if self.hit_timer > 0:
+            return
+        self.prev_state = self.state if self.state != "hit" else self.prev_state
+        self.state = "hit"
+        self.hit_timer = HIT_DURATION
+        self._set_animation(self.hit_image, IDLE_FRAME_W, IDLE_FRAME_H)
+        self.frame = 0
+
+        if attacker and hasattr(attacker, "transform"):
+            knock_dir = 1 if attacker.transform.x < self.transform.x else -1
+        else:
+            knock_dir = -self.dir
+        self.transform.x += knock_dir * 18
+        self.transform.y += 6
+
