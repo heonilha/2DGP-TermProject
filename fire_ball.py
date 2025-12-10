@@ -18,4 +18,7 @@ class FireBall(Projectile):
         damage = 5
         speed = 1000
 
-        super().__init__(x, y, direction, speed, damage, 30, 30, FireBall.image)
+        hitbox_w = 36
+        hitbox_h = 36
+
+        super().__init__(x, y, direction, speed, damage, hitbox_w, hitbox_h, FireBall.image)

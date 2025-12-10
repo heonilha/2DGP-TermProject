@@ -36,7 +36,8 @@ JUMP_AIR_FRAME = 1   # 공중에 있을 때 보여줄 프레임
 JUMP_LAND_FRAME = 0  # 착지 후 보여줄 프레임
 
 # 공격 관련 상수
-ATTACK_RANGE = 100.0             # 공격 감지 범위
+ATTACK_MIN_RANGE = 80.0          # 공격을 시도할 최소 거리
+ATTACK_MAX_RANGE = 180.0         # 공격 감지 최대 범위
 ATTACK_COOLTIME = 3.0            # 공격 쿨타임
 ATTACK_ANIM_SPEED = 0.2          # 공격 준비 애니메이션 속도 (프레임당 0.2초)
 ATTACK_HOLD_DURATION = 0.5       # 공격 전 1초 대기 시간
@@ -175,8 +176,12 @@ class Slime(GameObject):
         if self.attack_state != 'none' or self.hopping or self.preparing:
             return BehaviorTree.FAIL
 
-        if self.perception.is_in_range(ATTACK_RANGE) and self.attack_cooltime_timer >= self.attack_cooltime:
+        distance_sq = self.perception.distance_sq_to_target()
+        in_valid_range = ATTACK_MIN_RANGE * ATTACK_MIN_RANGE <= distance_sq <= ATTACK_MAX_RANGE * ATTACK_MAX_RANGE
+
+        if in_valid_range and self.attack_cooltime_timer >= self.attack_cooltime:
             return BehaviorTree.SUCCESS
+
         return BehaviorTree.FAIL
 
     def begin_attack(self):
@@ -200,6 +205,15 @@ class Slime(GameObject):
 
     def run_attack(self):
         dt = game_framework.frame_time
+
+        if (self.attack_state != 'dash' or not self.attack_dash_started) and (
+            self.perception.distance_sq_to_target() > ATTACK_MAX_RANGE * ATTACK_MAX_RANGE
+        ):
+            self.attack_state = 'none'
+            self.attack_cooltime_timer = 0.0
+            self.attack_dash_started = False
+            self.frame = JUMP_LAND_FRAME
+            return BehaviorTree.SUCCESS
 
         if self.attack_state == 'prepare':
             self.attack_anim_timer += dt
